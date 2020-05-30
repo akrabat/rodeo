@@ -13,13 +13,12 @@ image to Flickr.
 package commands
 
 import (
-	"github.com/akrabat/Golem/exif"
+	"github.com/akrabat/rodeo/internal"
 	"fmt"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
 	"gopkg.in/masci/flickr.v2/photosets"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,29 +76,24 @@ var uploadCmd = &cobra.Command{
 func uploadFile(filename string) string {
 	fmt.Println("Processing " + filename)
 
-	f, err := os.Open(filename)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	image, err := ImgMeta.ReadJpeg(f)
-	if err != nil {
-		fmt.Println(err.Error())
-		return ""
-	}
-
-	if err := f.Close(); err != nil {
-		log.Fatal(err)
-	}
-
-	basicInfo := ImgMeta.GetBasicInfo(image)
-
 	apiKey := viper.GetString("flickr.api_key")
 	apiSecret := viper.GetString("flickr.api_secret")
 	oauthToken := viper.GetString("flickr.oauth_token")
 	oauthTokenSecret := viper.GetString("flickr.oauth_token_secret")
 	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" {
 		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
+	}
+
+	exiftool := viper.GetString("cmd.exiftool")
+	if exiftool == "" {
+		fmt.Println("Error: cmd.exiftool needs to be configured.")
+		fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
+		os.Exit(2)
+	}
+
+	info, err := internal.GetImageInfo(filename, exiftool)
+	if err != nil {
+		return ""
 	}
 
 	// process keyword settings from config
@@ -115,7 +109,7 @@ func uploadFile(filename string) string {
 		// 	  - delete: if `true`, then do not include this keyword as a Flickr tag
 		//    - album_id: if set, then add this photo to that album
 		//    - permissions: if set, then set permissions on this photo
-		for _, keyword := range basicInfo.Keywords {
+		for _, keyword := range info.Keywords {
 			addKeyword := true
 			settings, ok := keywordSettings[keyword].(map[string]interface{})
 			if ok {
@@ -155,7 +149,7 @@ func uploadFile(filename string) string {
 			}
 		}
 	} else {
-		keywordsToAdd = basicInfo.Keywords
+		keywordsToAdd = info.Keywords
 	}
 
 	// Upload file to Flickr
@@ -164,7 +158,7 @@ func uploadFile(filename string) string {
 	client.OAuthToken = oauthToken
 	client.OAuthTokenSecret = oauthTokenSecret
 
-	title := strings.Trim(basicInfo.Title, " ")
+	title := strings.Trim(info.Title, " ")
 	if title == "" {
 		// no title - use filename (without extension)
 		title = filepath.Base(filename)
@@ -182,8 +176,8 @@ func uploadFile(filename string) string {
 		Hidden:      1, // not hidden
 		SafetyLevel: 1, // safe
 	}
-	if basicInfo.Descr != "" {
-		params.Description = basicInfo.Descr
+	if info.Description != "" {
+		params.Description = info.Description
 	}
 
 	response, err := flickr.UploadFile(client, filename, &params)
@@ -199,6 +193,7 @@ func uploadFile(filename string) string {
 		for _, albumId := range albumsToAddTo {
 			respAdd, err := photosets.AddPhoto(client, albumId, photoId)
 			if err != nil {
+				//noinspection GoNilness
 				fmt.Println("Failed adding photo to the set:"+albumId, err, respAdd.ErrorMsg())
 			} else {
 				fmt.Println("Added photo", photoId, "to set", albumId)

@@ -13,10 +13,10 @@ image to Flickr.
 package commands
 
 import (
-	"github.com/akrabat/Golem/exif"
+	"github.com/akrabat/rodeo/internal"
 	"fmt"
 	"github.com/spf13/cobra"
-	"log"
+	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"sort"
@@ -50,36 +50,35 @@ var infoCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
+		exiftool := viper.GetString("cmd.exiftool")
+		if exiftool == "" {
+			fmt.Println("Error: cmd.exiftool needs to be configured.")
+			fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
+			os.Exit(2)
+		}
+
 		for _, filename := range args {
-			fileInfo(filename)
+			fileInfo(filename, exiftool)
 			fmt.Printf("\n")
 		}
 	},
 }
 
-func fileInfo(filename string) {
+func fileInfo(filename string, exiftool string) {
 	fmt.Printf("%v:\n", filepath.Base(filename))
 
-	f, err := os.Open(filename)
+	info, err := internal.GetImageInfo(filename, exiftool)
 	if err != nil {
-		log.Fatal(err)
-	}
-
-	image, err := ImgMeta.ReadJpeg(f)
-	if err != nil {
-		fmt.Println(err.Error())
 		return
 	}
 
-	basicInfo := ImgMeta.GetBasicInfo(image)
+	fmt.Printf("  Title:       %v\n", info.Title)
+	fmt.Printf("  Description: %v\n", info.Description)
 
-	fmt.Printf("  Title:       %v\n", basicInfo.Title)
-	fmt.Printf("  Description: %v\n", basicInfo.Descr)
+	sort.Sort(sort.StringSlice(info.Keywords[:]))
+	fmt.Printf("  Keywords:    %v\n", strings.Join(info.Keywords[:], ", "))
 
-	sort.Sort(sort.StringSlice(basicInfo.Keywords[:]))
-	fmt.Printf("  Keywords:    %v\n", strings.Join(basicInfo.Keywords[:], ", "))
-
-	fmt.Printf("  Dimensions:  width:%v, height:%v\n", basicInfo.Width, basicInfo.Height)
-	fmt.Printf("  Camera:      %v %v\n", basicInfo.Make, basicInfo.Model)
-	fmt.Printf("  Exposure:    %vs, f/%v, ISO%v\n", basicInfo.ShutterSpeed, basicInfo.Aperture, basicInfo.ISO)
+	fmt.Printf("  Dimensions:  width:%v, height:%v\n", info.Width, info.Height)
+	fmt.Printf("  Camera:      %v %v\n", info.Make, info.Model)
+	fmt.Printf("  Exposure:    %vs, f/%v, ISO%v\n", info.ShutterSpeed, info.Aperture, info.ISO)
 }

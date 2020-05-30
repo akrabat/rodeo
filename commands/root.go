@@ -24,7 +24,7 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Version: "0.0.1",
+	Version: "0.0.2",
 	Use:     "rodeo",
 	Short:   "Flickr command line tool",
 	Long: `A command line tool to work with Flickr and images.
