@@ -29,8 +29,11 @@ var rootCmd = &cobra.Command{
 	Short:   "Flickr command line tool",
 	Long: `A command line tool to work with Flickr and images.
 
-Initially, it supports uploading new images with automatic dates, albums,
-privacy and license.`,
+Rodeo uploads images to Flickr, applying keyword based rules to add the image
+to albums and also to delete keywords that you may not want to be published. It
+can also resize images for sharing on social media or in messages.
+`,
+
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },
