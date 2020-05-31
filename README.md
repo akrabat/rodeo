@@ -4,6 +4,12 @@ Rodeo uploads images to [Flickr][1], applying keyword based rules to add the ima
 
 It can also resize images for sharing on social media or in messages.
 
+**Table of Contents:**
+
+* [Usage](#usage)
+* [Installation](#installation)
+* [Config](#config)
+
 [1]: https://flickr.com
 
 ## Usage
@@ -49,10 +55,16 @@ $ rodeo info <files...>
 
 ## Installation
 
+You can download a binary from the [Releases page][releases] or you can build the source code.
+
+To build the source code:
+
 1. Clone this repository
 2. Build rodeo: `go build`
 3. Copy to a directory on your path: `mv rodeo /usr/local/bin` 
 4. Run `rodeo --help` to check that it works
+
+[releases]: https://github.com/akrabat/rodeo/releases
 
 ### Install dependencies
 
