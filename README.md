@@ -122,10 +122,30 @@ resize:
    scale: "2000x2000"
 
 # rules for `rodeo upload`
-keywords:
-   {keyword}: 
-     delete: true
-     album_id: "{album id}"
+rules:
+  - condition: 
+      excludes_any:
+        - {keywordA}
+        - {keywordB}
+      includes_all:
+        - {keyword1}
+        - {keyword2}
+    action:
+      delete: true # deletes {keyword1} and {keyword2}
+      albums:
+        - id: "{album1 id}"
+          name: "{album1 name}"
+        - id: "{album2 id}"
+          name: "{album2 name}"
+  - condition: 
+      excludes_all:
+        - {keywordC}
+        - {keywordD}
+      includes_any:
+        - {keyword3}
+        - {keyword4}
+    action:
+      delete: true # deletes {keyword3} and/or {keyword4}
 ```
 
 ### Resize configuration
@@ -144,11 +164,24 @@ run of `rodeo resize`
 
 ### Upload rules
 
-For each keyword there are two actions:
+For each rules there are up to four conditions and two actions:
 
-| Action     | What it does                                                                         |
-| ---------- | ------------------------------------------------------------------------------------ |
-| `delete`   | When `true`, deletes the keyword from the file so that it does not exist on Flickr.  |
-| `album_id` | Flickr ID of the album that this image will be added to.                             |
+*Conditions:*
+
+| Condition      | What it does                                                                                        |
+| -------------- | --------------------------------------------------------------------------------------------------- |
+| `excludes_all` | If every keyword in `excludes_all` exists in this photo's keywords, then skip rule.                 |
+| `excludes_any` | If at least one keyword from `excludes_any` exists in this photo's keywords, then skip rule.        |
+| `includes_all` | All keywords in `includes_all` must exist in this photo's keywords for the rule to apply.           |
+| `includes_any` | At least one keyword from `includes_all` must exist in this photo's keywords for the rule to apply. |
+
+*Actions:*
+
+Each action is independent. One may exist or both.
+
+| Action   | What it does                                                                         |
+| -------- | ------------------------------------------------------------------------------------ |
+| `delete` | When `true`, deletes the keyword from the file so that it does not exist on Flickr.  |
+| `albums` | List of `id` and `name` for the albums that this image will be added to.             |
 
 

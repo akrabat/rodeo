@@ -13,8 +13,8 @@ image to Flickr.
 package commands
 
 import (
-	"github.com/akrabat/rodeo/internal"
 	"fmt"
+	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
@@ -50,7 +50,8 @@ var infoCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
-		exiftool := viper.GetString("cmd.exiftool")
+		config := GetConfig()
+		exiftool := config.Cmd.Exiftool
 		if exiftool == "" {
 			fmt.Println("Error: cmd.exiftool needs to be configured.")
 			fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
@@ -67,7 +68,7 @@ var infoCmd = &cobra.Command{
 func fileInfo(filename string, exiftool string) {
 	fmt.Printf("%v:\n", filepath.Base(filename))
 
-	info, err := internal.GetImageInfo(filename, exiftool)
+	info, err := GetImageInfo(filename, exiftool)
 	if err != nil {
 		return
 	}

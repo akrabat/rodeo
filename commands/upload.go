@@ -13,8 +13,8 @@ image to Flickr.
 package commands
 
 import (
-	"github.com/akrabat/rodeo/internal"
 	"fmt"
+	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
@@ -76,80 +76,141 @@ var uploadCmd = &cobra.Command{
 func uploadFile(filename string) string {
 	fmt.Println("Processing " + filename)
 
-	apiKey := viper.GetString("flickr.api_key")
-	apiSecret := viper.GetString("flickr.api_secret")
-	oauthToken := viper.GetString("flickr.oauth_token")
-	oauthTokenSecret := viper.GetString("flickr.oauth_token_secret")
+	config := GetConfig()
+
+	apiKey := config.Flickr.ApiKey
+	apiSecret := config.Flickr.ApiSecret
+	oauthToken := config.Flickr.OauthToken
+	oauthTokenSecret := config.Flickr.OauthSecret
 	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" {
 		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
 	}
 
-	exiftool := viper.GetString("cmd.exiftool")
+	exiftool := config.Cmd.Exiftool
 	if exiftool == "" {
 		fmt.Println("Error: cmd.exiftool needs to be configured.")
 		fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
 		os.Exit(2)
 	}
 
-	info, err := internal.GetImageInfo(filename, exiftool)
+	info, err := GetImageInfo(filename, exiftool)
 	if err != nil {
 		return ""
 	}
 
-	// process keyword settings from config
+	// process rules
 	var keywordsToRemove []string
 	var keywordsToAdd []string
-	var albumsToAddTo []string
+	var albumsToAddTo []Album
 
-	keywordSettings := viper.GetStringMap("keywords")
-	if len(keywordSettings) > 0 {
-		// Iterate over the keywords on this photo. for each keyword, look through the
-		// list of keywords in the config and if it matches, then process the options for
-		// that keyword:
-		// 	  - delete: if `true`, then do not include this keyword as a Flickr tag
-		//    - album_id: if set, then add this photo to that album
-		//    - permissions: if set, then set permissions on this photo
-		for _, keyword := range info.Keywords {
-			addKeyword := true
-			settings, ok := keywordSettings[keyword].(map[string]interface{})
-			if ok {
-				for key, val := range settings {
-					if key == "delete" && val.(bool) == true {
-						keywordsToRemove = append(keywordsToRemove, keyword)
-						addKeyword = false
-					}
-					if key == "album_id" {
-						albumsToAddTo = append(albumsToAddTo, val.(string))
+	if config.Rules != nil {
+		for _, rule := range config.Rules {
+			excludesAll := rule.Condition.ExcludesAll
+			excludesAny := rule.Condition.ExcludesAny
+			includesAll := rule.Condition.IncludesAll
+			includesAny := rule.Condition.IncludesAny
+
+			var intersection []string // applicable keywords from the condition
+
+			// If the list of keywords for this image has all of `excludesAll`, then the rule is ignored
+			if len(excludesAll) > 0 {
+				intersection = Intersection(info.Keywords, excludesAll)
+				if len(intersection) == len(excludesAll) {
+					// Every `excludesAll` keyword is in info.Keywords, so this rule does not apply
+					//fmt.Println("Excluding due to `excludesAll`")
+					continue
+				}
+				//fmt.Println("`excludesAll` condition does not apply")
+			}
+
+			// If the list of keywords for this image has any from `excludesAny`, then the rule is ignored
+			if len(excludesAny) > 0 {
+				intersection = Intersection(info.Keywords, excludesAny)
+				if len(intersection) > 0 {
+					// At least one `excludesAny` keyword is in info.Keywords, so this rule does not apply
+					//fmt.Println("Excluding due to `excludesAny`")
+					continue
+				}
+				//fmt.Println("`excludesAny` condition does not apply")
+			}
+
+			processRules := false
+			if len(includesAll) > 0 {
+				//  info.Keywords must contain all keywords in `includesAll`
+				intersection = Intersection(info.Keywords, includesAll)
+				if len(intersection) != len(includesAll) {
+					// All `includesAll` keywords do not exist, so this rule does not apply
+					//fmt.Println("Excluding due to `includesAll`")
+					continue
+				}
+				//fmt.Println("`includesAll` condition is met")
+				processRules = true
+			} else if len(includesAny) > 0 {
+				//  info.Keywords must contain all keywords in `includesAny`
+				intersection = Intersection(info.Keywords, includesAny)
+				if len(intersection) == 0 {
+					// There are no `includesAny` keywords in info.Keywords, so this rule does not apply
+					//fmt.Println("Excluding due to `includesAny`")
+					continue
+				}
+				//fmt.Println("`includesAny` condition is met")
+				processRules = true
+			}
+
+			if processRules {
+				//fmt.Println("Will process rules")
+				//fmt.Printf("Applicable keywords: %s\n", strings.Join(intersection, ", "))
+				if rule.Action.Delete {
+					keywordsToRemove = append(keywordsToRemove, intersection...)
+				}
+				if len(rule.Action.Albums) > 0 {
+					for _, album := range rule.Action.Albums {
+						albumsToAddTo = append(albumsToAddTo, album)
 					}
 				}
-			}
-			if addKeyword {
-				keywordsToAdd = append(keywordsToAdd, keyword)
 			}
 		}
+	}
 
-		if len(keywordsToRemove) > 0 {
-			// If exiftool is available, remove keywords from original file
-			exiftool := viper.GetString("cmd.exiftool")
-			if exiftool != "" {
-				// Format of command: exiftool -overwrite_original -keywords-=one -keywords-=two FILENAME
-				var parameters []string
-				parameters = append(parameters, "-overwrite_original")
-				for _, k := range keywordsToRemove {
-					parameters = append(parameters, fmt.Sprintf("-keywords-=%s", k))
-					parameters = append(parameters, fmt.Sprintf("-subject-=%s", k))
-				}
-				parameters = append(parameters, filename)
-				//fmt.Println("Removing keywords from photo")
-				cmd := exec.Command(exiftool, parameters...)
-				cmd.Dir = filepath.Dir(filename)
-				if err := cmd.Run(); err != nil {
-					fmt.Println("Error: ", err)
-				}
-			}
-		}
+	// Set the keywords to be added to the Flickr photo record
+	if len(keywordsToRemove) > 0 {
+		difference := Difference(info.Keywords, keywordsToRemove)
+		keywordsToAdd = difference
 	} else {
 		keywordsToAdd = info.Keywords
+	}
+
+	// output what we are going to do
+	if len(keywordsToRemove) > 0 || len(albumsToAddTo) > 0 {
+		fmt.Printf("Actions:\n")
+		if len(keywordsToRemove) > 0 {
+			fmt.Printf("  - keywords to remove: %s\n", strings.Join(keywordsToRemove, ", "))
+		}
+		if len(albumsToAddTo) > 0 {
+			strs := make([]string, len(albumsToAddTo))
+			for i, a := range albumsToAddTo {
+				strs[i] = a.Name
+			}
+			fmt.Printf("  - albums to add to: %s\n", strings.Join(strs, ", "))
+		}
+		fmt.Printf("\n")
+	}
+
+	if len(keywordsToRemove) > 0 && exiftool != "" {
+		// Format of command: exiftool -overwrite_original -keywords-=one -keywords-=two FILENAME
+		var parameters []string
+		parameters = append(parameters, "-overwrite_original")
+		for _, k := range keywordsToRemove {
+			parameters = append(parameters, fmt.Sprintf("-keywords-=%s", k))
+			parameters = append(parameters, fmt.Sprintf("-subject-=%s", k))
+		}
+		parameters = append(parameters, filename)
+		//fmt.Println("Removing keywords from photo")
+		cmd := exec.Command(exiftool, parameters...)
+		cmd.Dir = filepath.Dir(filename)
+		if err := cmd.Run(); err != nil {
+			fmt.Println("Error: ", err)
+		}
 	}
 
 	// Upload file to Flickr
@@ -166,9 +227,16 @@ func uploadFile(filename string) string {
 	}
 
 	// Upload photo
+
+	// quote keywords for Flickr's tags
+	tags := make([]string, len(keywordsToAdd))
+	for i, kw := range keywordsToAdd {
+		tags[i] = fmt.Sprintf("\"%s\"", kw)
+	}
+
 	params := flickr.UploadParams{
 		Title:       title,
-		Tags:        keywordsToAdd,
+		Tags:        tags,
 		IsPublic:    true,
 		IsFamily:    true,
 		IsFriend:    true,
@@ -190,17 +258,18 @@ func uploadFile(filename string) string {
 
 	if len(albumsToAddTo) > 0 {
 		// assign photo to each photoset in the list
-		for _, albumId := range albumsToAddTo {
-			respAdd, err := photosets.AddPhoto(client, albumId, photoId)
+		for _, album := range albumsToAddTo {
+			respAdd, err := photosets.AddPhoto(client, album.Id, photoId)
 			if err != nil {
 				//noinspection GoNilness
-				fmt.Println("Failed adding photo to the set:"+albumId, err, respAdd.ErrorMsg())
+				fmt.Println("Failed adding photo to the set: "+album.String(), err, respAdd.ErrorMsg())
 			} else {
-				fmt.Println("Added photo", photoId, "to set", albumId)
+				fmt.Println("Added photo", photoId, "to set", album.String())
 			}
 		}
 	}
 
+	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
 }

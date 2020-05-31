@@ -13,8 +13,8 @@ package commands
 
 import (
 	"fmt"
+	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
 	"gopkg.in/masci/flickr.v2/photosets"
 )
@@ -35,11 +35,12 @@ var listAlbumsCmd = &cobra.Command{
 func listAlbums() {
 	fmt.Println("Listing Flickr albums")
 
-	apiKey := viper.GetString("flickr.api_key")
-	apiSecret := viper.GetString("flickr.api_secret")
-	oauthToken := viper.GetString("flickr.oauth_token")
-	oauthTokenSecret := viper.GetString("flickr.oauth_token_secret")
-	userId := viper.GetString("flickr.user_nsid")
+	config := GetConfig()
+	apiKey := config.Flickr.ApiKey
+	apiSecret := config.Flickr.ApiSecret
+	oauthToken := config.Flickr.OauthToken
+	oauthTokenSecret := config.Flickr.OauthSecret
+	userId := config.Flickr.UserId
 
 	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" || userId == "" {
 		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")

@@ -14,6 +14,7 @@ package commands
 import (
 	"bufio"
 	"fmt"
+	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
@@ -41,7 +42,8 @@ func authenticate() {
 
 	buf := bufio.NewReader(os.Stdin)
 
-	apiKey := viper.GetString("flickr.api_key")
+	config := GetConfig()
+	apiKey := config.Flickr.ApiKey
 	fmt.Println("Please provide your Flickr API Key. (Default: " + apiKey + ")")
 	fmt.Print("> ")
 	input, err := buf.ReadString('\n')
