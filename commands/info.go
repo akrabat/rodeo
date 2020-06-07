@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 func init() {
@@ -75,6 +76,7 @@ func fileInfo(filename string, exiftool string) {
 
 	fmt.Printf("  Title:       %v\n", info.Title)
 	fmt.Printf("  Description: %v\n", info.Description)
+	fmt.Printf("  Date taken: %v\n", info.Date.Format(time.RFC1123Z))
 
 	sort.Sort(sort.StringSlice(info.Keywords[:]))
 	fmt.Printf("  Keywords:    %v\n", strings.Join(info.Keywords[:], ", "))

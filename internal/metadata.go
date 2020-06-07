@@ -5,20 +5,24 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"regexp"
+	"strconv"
+	"time"
 )
 
 type ImageInfo struct {
-	Width        uint        `json:"ExifImageWidth"`
-	Height       uint        `json:"ExifImageHeight"`
-	Title        string      `json:"ObjectName"`
-	Description  string      `json:"Caption-Abstract"`
-	Keywords     stringArray `json:"Keywords"`
-	DateCreated  string      `json:"DateTimeOriginal"`
-	Make         string      `json:"Make"`
-	Model        string      `json:"Model"`
-	ShutterSpeed string      `json:"ShutterSpeedValue"`
-	Aperture     json.Number `json:"ApertureValue"`
-	ISO          json.Number `json:"ISO"`
+	Width        uint                   `json:"ExifImageWidth"`
+	Height       uint                   `json:"ExifImageHeight"`
+	Title        string                 `json:"ObjectName"`
+	Description  string                 `json:"Caption-Abstract"`
+	Keywords     stringArray            `json:"Keywords"`
+	Date         *time.Time
+	Make         string                 `json:"Make"`
+	Model        string                 `json:"Model"`
+	ShutterSpeed string                 `json:"ShutterSpeedValue"`
+	Aperture     json.Number            `json:"ApertureValue"`
+	ISO          json.Number            `json:"ISO"`
+	X            map[string]interface{} `json:"-"`
 }
 
 // A stringArray is an array of strings that has been unmarshalled from a JSON
@@ -61,10 +65,43 @@ func GetImageInfo(filename string, exiftool string) (*ImageInfo, error) {
 	out = out[1 : len(out)-2]
 
 	info := ImageInfo{}
-	err = json.Unmarshal(out, &info)
-	if err != nil {
+	if err := json.Unmarshal(out, &info); err != nil {
 		log.Println(err)
 	}
 
+	// unmarshall everything into info.X
+	if err := json.Unmarshal(out, &info.X); err != nil {
+		log.Println(err)
+	}
+
+	setImageInfoDate(&info)
+
 	return &info, nil
+}
+
+func setImageInfoDate(info *ImageInfo) {
+	// Set DateTimeOriginal with offset from OffsetTimeOriginal if it's set and is an offset
+	dateTimeOriginal :=  info.X["DateTimeOriginal"].(string)
+
+	var offsetTimeOriginal string
+	offsetTimeOriginal =  info.X["OffsetTimeOriginal"].(string)
+
+	tz := time.FixedZone("UTC", 0)
+	if offsetTimeOriginal[0] == '+' || offsetTimeOriginal[0] == '-' {
+		// Determine timezone offset
+		re := regexp.MustCompile(`[+|-]?\d{2}`)
+		parts := re.FindAllString(offsetTimeOriginal, -1)
+		if len(parts) == 2 {
+			offsetHours, _ := strconv.Atoi(parts[0])
+			offsetMins, _ := strconv.Atoi(parts[1])
+
+			// As we don't know the Timezone identifier, leave it blank
+			tz = time.FixedZone("", 60*((60*offsetHours)+(30*offsetMins)))
+		}
+	}
+
+	date, err := time.ParseInLocation("2006:01:02 15:04:05", dateTimeOriginal, tz)
+	if err == nil {
+		info.Date = &date
+	}
 }
