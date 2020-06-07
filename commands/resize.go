@@ -14,8 +14,8 @@ package commands
 
 import (
 	"fmt"
+	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,24 +44,17 @@ var resizeCmd = &cobra.Command{
 	},
 }
 
-func getSetting(name string, defaultValue string) string {
-	value := viper.GetString(name)
-	if value == "" {
-		value = defaultValue
-		viper.Set(name, value)
-		viper.WriteConfig()
-	}
-	return value
-}
-
+// Resize image using ImageMagick's convert
+//
+// Example:
+//    convert foo.jpg -scale 2000x2000 -interpolate catrom -quality 75 foo-web.jpeg
 func resize(filename string) {
 
-	//convert RKA-20200527-073835-IMG_7029.jpeg -scale 2000x2000 -interpolate catrom -quality 75  RKA-20200527-073524-IMG_7028-web.jpeg
-
-	convert := getSetting("cmd.convert", "/usr/local/bin/convert")
-	scale := getSetting("resize.scale", "2000x2000")
-	method := getSetting("resize.method", "catrom")
-	quality := getSetting("resize.quality", "75")
+	config := GetConfig()
+	convert := config.Cmd.Convert
+	scale := config.Resize.Scale
+	method := config.Resize.Method
+	quality := config.Resize.Quality
 
 	newFilename := filepath.Base(filename)
 	newFilename = strings.TrimSuffix(newFilename, filepath.Ext(filename))

@@ -64,6 +64,9 @@ func GetConfig() *Config {
 		return config
 	}
 
+	// set defaults
+	setDefaults()
+
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		fmt.Printf("Unable to decode into struct, %v\n", err)
@@ -71,4 +74,26 @@ func GetConfig() *Config {
 	}
 
 	return config
+}
+
+func setDefaults() {
+
+
+	if viper.IsSet("cmd.convert") == false {
+		viper.Set("cmd.convert", "/usr/local/bin/convert")
+	}
+
+	if viper.IsSet("resize.scale") == false {
+		viper.Set("resize.scale", "2000x2000")
+	}
+	if viper.IsSet("resize.method") == false {
+		viper.Set("resize.method", "catrom")
+	}
+	if viper.IsSet("resize.quality") == false {
+		viper.Set("resize.quality", "75")
+	}
+
+	if err := viper.WriteConfig(); err != nil {
+		fmt.Println("Error writing config: ", err)
+	}
 }
