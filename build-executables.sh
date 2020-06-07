@@ -10,30 +10,14 @@ if [[ -z "$version" ]]; then
 fi
 package_name=rodeo
 
-#the full list of the platforms: https://golang.org/doc/install/source#environment
+#
+# The full list of the platforms is at: https://golang.org/doc/install/source#environment
 platforms=(
 "darwin/amd64"
-"linux/386"
 "linux/amd64"
 "linux/arm"
 "linux/arm64"
-"windows/386"
 "windows/amd64"
-#"darwin/arm"
-#"darwin/arm64"
-# "dragonfly/amd64"
-# "freebsd/386"
-# "freebsd/amd64"
-# "freebsd/arm"
-# "netbsd/386"
-# "netbsd/amd64"
-# "netbsd/arm"
-# "openbsd/386"
-# "openbsd/amd64"
-# "openbsd/arm"
-# "plan9/386"
-# "plan9/amd64"
-# "solaris/amd64"
 )
 
 rm -rf release/
