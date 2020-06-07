@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
 	"gopkg.in/masci/flickr.v2/photosets"
+	"gopkg.in/masci/flickr.v2/photos"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -255,6 +256,17 @@ func uploadFile(filename string) string {
 	}
 	photoId := response.ID
 	fmt.Printf("Uploaded photo '%s'\n", title)
+
+	// set date posted to the date that the photo was taken so that it's in the right place
+	// in the Flickr photo stream
+	setDatePosted := config.Upload.SetDatePosted
+	if setDatePosted == true && info.Date != nil {
+		datePosted := fmt.Sprintf("%d", info.Date.Unix())
+		respSetDate, err := photos.SetDates(client, photoId, datePosted, "")
+		if err == nil {
+			fmt.Printf("Failed update photo %v's date posted: %v\n%v\n: ", photoId, err, respSetDate.ErrorMsg())
+		}
+	}
 
 	if len(albumsToAddTo) > 0 {
 		// assign photo to each photoset in the list

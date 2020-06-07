@@ -115,6 +115,10 @@ flickr:
    user_nsid: "{user's id}"
    username: "{user's name}"
 
+# Configuration for `rodeo upload`
+upload:
+   set_date_posted: false
+
 # Configuration for `rodeo resize`
 resize:
    method: "catrom"
@@ -151,7 +155,7 @@ rules:
 ### Resize configuration
 
 If these do not exist in `rodeo.yaml`, then they are added automatically on first
-run of `rodeo resize`
+run of `rodeo`
 
 | Property  | What it does                                                            |
 | --------- | ----------------------------------------------------------------------- |
@@ -161,6 +165,15 @@ run of `rodeo resize`
 
 [im]: https://imagemagick.org/script/command-line-options.php#interpolate
 [cl]: https://imagemagick.org/script/command-line-options.php#quality
+
+### Upload configuration
+
+If these do not exist in `rodeo.yaml`, then they are added automatically on first
+run of `rodeo`
+
+| Property          | What it does                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `set_date_posted` | If set to true, then the date posted is set to the date captured. Default is `false` |
 
 ### Upload rules
 

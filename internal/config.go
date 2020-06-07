@@ -22,6 +22,10 @@ type Flickr struct {
 	Username string `mapstructure:"username"`
 }
 
+type Upload struct {
+	SetDatePosted  bool `mapstructure:"set_date_posted"`
+}
+
 type Resize struct {
 	Method  string
 	Quality string
@@ -55,6 +59,7 @@ type Rules struct {
 type Config struct {
 	Cmd Command
 	Flickr Flickr
+	Upload Upload
 	Resize Resize
 	Rules []Rules
 }
@@ -78,6 +83,9 @@ func GetConfig() *Config {
 
 func setDefaults() {
 
+	if viper.IsSet("upload.set_date_posted") == false {
+		viper.Set("upload.set_date_posted", false)
+	}
 
 	if viper.IsSet("cmd.convert") == false {
 		viper.Set("cmd.convert", "/usr/local/bin/convert")
