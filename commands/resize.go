@@ -57,8 +57,12 @@ func resize(filename string) {
 	quality := config.Resize.Quality
 
 	newFilename := filepath.Base(filename)
+	newDirectory := filepath.Dir(filename)
 	newFilename = strings.TrimSuffix(newFilename, filepath.Ext(filename))
 	newFilename += fmt.Sprintf("-web%s", filepath.Ext(filename))
+
+	// add directory
+	newFilename = fmt.Sprintf("%s%c%s", newDirectory, os.PathSeparator, newFilename)
 
 	var parameters []string
 	parameters = append(parameters, filename)
