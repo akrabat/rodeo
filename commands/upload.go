@@ -69,6 +69,7 @@ var uploadCmd = &cobra.Command{
 
 		if len(photoIds) > 0 {
 			username := viper.GetString("flickr.username")
+			fmt.Printf("Edit: http://www.flickr.com/photos/upload/edit/?ids=%s\n", strings.Join(photoIds, ","))
 			fmt.Printf("View: http://www.flickr.com/photos/%s'\n", username)
 		}
 	},
