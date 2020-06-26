@@ -264,8 +264,8 @@ func uploadFile(filename string) string {
 	if setDatePosted == true && info.Date != nil {
 		datePosted := fmt.Sprintf("%d", info.Date.Unix())
 		respSetDate, err := photos.SetDates(client, photoId, datePosted, "")
-		if err == nil {
-			fmt.Printf("Failed update photo %v's date posted: %v\n%v\n: ", photoId, err, respSetDate.ErrorMsg())
+		if err != nil {
+			fmt.Printf("Failed update photo %v's date posted: %v\n%v\n", photoId, err, respSetDate.ErrorMsg())
 		}
 	}
 
