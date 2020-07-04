@@ -32,18 +32,30 @@ type stringArray []string
 func (sa *stringArray) UnmarshalJSON(data []byte) error {
 	if len(data) > 0 {
 		switch data[0] {
-		case '"':
-			var s string
-			if err := json.Unmarshal(data, &s); err != nil {
-				return err
-			}
-			*sa = stringArray([]string{s})
 		case '[':
+			// It's an array of strings and/or numbers, so unmarshal to an array of interfaces and then iterate over
+			// the array converting each one to a string.
+			var items []interface{}
 			var s []string
-			if err := json.Unmarshal(data, &s); err != nil {
+			if err := json.Unmarshal(data, &items); err != nil {
 				return err
 			}
-			*sa = stringArray(s)
+
+			for _, item := range items {
+				s = append(s, fmt.Sprintf("%v", item))
+			}
+
+			*sa = s
+		default:
+			// It's a single element that may be a string or a number, unmarshal to an interface and convert to a
+			// string.
+			var item interface{}
+			var s string
+			if err := json.Unmarshal(data, &item); err != nil {
+				return err
+			}
+			s = fmt.Sprintf("%v", item)
+			*sa = []string{s}
 		}
 	}
 	return nil
