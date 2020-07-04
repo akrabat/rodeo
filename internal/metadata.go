@@ -83,25 +83,39 @@ func setImageInfoDate(info *ImageInfo) {
 	// Set DateTimeOriginal with offset from OffsetTimeOriginal if it's set and is an offset
 	dateTimeOriginal :=  info.X["DateTimeOriginal"].(string)
 
-	var offsetTimeOriginal string
-	offsetTimeOriginal =  info.X["OffsetTimeOriginal"].(string)
-
+	// Determine timezone
 	tz := time.FixedZone("UTC", 0)
-	if offsetTimeOriginal[0] == '+' || offsetTimeOriginal[0] == '-' {
-		// Determine timezone offset
-		re := regexp.MustCompile(`[+|-]?\d{2}`)
-		parts := re.FindAllString(offsetTimeOriginal, -1)
-		if len(parts) == 2 {
-			offsetHours, _ := strconv.Atoi(parts[0])
-			offsetMins, _ := strconv.Atoi(parts[1])
-
-			// As we don't know the Timezone identifier, leave it blank
-			tz = time.FixedZone("", 60*((60*offsetHours)+(30*offsetMins)))
-		}
+	if maybeOffsetTimeOriginal, ok := info.X["OffsetTimeOriginal"]; ok {
+		offsetTimeOriginal := maybeOffsetTimeOriginal.(string)
+		tz = getTimeZoneFromOffset(offsetTimeOriginal, tz)
+	} else if maybeOffsetTime, ok := info.X["OffsetTime"]; ok {
+		offsetTime := maybeOffsetTime.(string)
+		tz = getTimeZoneFromOffset(offsetTime, tz)
 	}
 
 	date, err := time.ParseInLocation("2006:01:02 15:04:05", dateTimeOriginal, tz)
 	if err == nil {
 		info.Date = &date
 	}
+}
+
+// Extract the timezone from an offset of the form "±HH:MM"
+func getTimeZoneFromOffset(offset string, tz *time.Location) *time.Location {
+	if offset[0] == '+' || offset[0] == '-' {
+		// Determine timezone offset
+		re := regexp.MustCompile(`[+|-]?\d{2}`)
+		parts := re.FindAllString(offset, -1)
+		if len(parts) == 2 {
+			offsetHours, _ := strconv.Atoi(parts[0])
+			offsetMins, _ := strconv.Atoi(parts[1])
+
+			if offsetHours != 0 && offsetMins != 0 {
+				// Set the timezone as a numeric index
+				// Note: as we don't know the Timezone identifier, leave it blank
+				tz = time.FixedZone("", 60*((60*offsetHours)+(30*offsetMins)))
+			}
+		}
+	}
+
+	return tz
 }
