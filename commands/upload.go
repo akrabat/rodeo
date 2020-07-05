@@ -33,15 +33,8 @@ const uploadedFilesBaseFilename = ".rodeo-uploaded-files.json"
 func init() {
 	rootCmd.AddCommand(uploadCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// uploadCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// uploadCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Register --force
+	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 }
 
 // uploadCmd represents the upload command
@@ -62,9 +55,15 @@ var uploadCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
+		// Read the value of --force (if it is missing, the value is false)
+		forceUpload, err := cmd.Flags().GetBool("force")
+		if err != nil {
+			forceUpload = false
+		}
+
 		var photoIds []string
 		for _, filename := range args {
-			photoId := uploadFile(filename)
+			photoId := uploadFile(filename, forceUpload)
 			if photoId != "" {
 				photoIds = append(photoIds, photoId)
 			}
@@ -79,7 +78,7 @@ var uploadCmd = &cobra.Command{
 	},
 }
 
-func uploadFile(filename string) string {
+func uploadFile(filename string, forceUpload bool) string {
 	fmt.Println("Processing " + filename)
 
 	config := GetConfig()
@@ -101,10 +100,14 @@ func uploadFile(filename string) string {
 
 	// Has this image been uploaded before?
 	if uploadedPhotoId := getUploadedPhotoId(filename); uploadedPhotoId != "" {
-		fmt.Println("This image has already been uploaded to Flickr.")
-		fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, uploadedPhotoId)
-		fmt.Println("")
-		return ""
+		fmt.Print("This image has already been uploaded to Flickr.")
+		if forceUpload == true {
+			fmt.Println(" Forcing upload.")
+		} else {
+			fmt.Printf("\nView this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, uploadedPhotoId)
+			fmt.Println("")
+			return ""
+		}
 	}
 
 	info, err := GetImageInfo(filename, exiftool)
