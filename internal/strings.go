@@ -1,6 +1,8 @@
 package internal
 
-import "strings"
+import (
+	"strings"
+)
 
 // from https://stackoverflow.com/a/45024302/23060
 func filter(src []string) (res []string) {

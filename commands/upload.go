@@ -13,18 +13,22 @@ image to Flickr.
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
-	"gopkg.in/masci/flickr.v2/photosets"
 	"gopkg.in/masci/flickr.v2/photos"
+	"gopkg.in/masci/flickr.v2/photosets"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
+
+const uploadedFilesBaseFilename = ".rodeo-uploaded-files.json"
 
 func init() {
 	rootCmd.AddCommand(uploadCmd)
@@ -93,6 +97,14 @@ func uploadFile(filename string) string {
 		fmt.Println("Error: cmd.exiftool needs to be configured.")
 		fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
 		os.Exit(2)
+	}
+
+	// Has this image been uploaded before?
+	if uploadedPhotoId := getUploadedPhotoId(filename); uploadedPhotoId != "" {
+		fmt.Println("This image has already been uploaded to Flickr.")
+		fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, uploadedPhotoId)
+		fmt.Println("")
+		return ""
 	}
 
 	info, err := GetImageInfo(filename, exiftool)
@@ -217,6 +229,7 @@ func uploadFile(filename string) string {
 
 	// Upload file to Flickr
 	fmt.Println("Uploading photo to Flickr")
+
 	client := flickr.NewFlickrClient(apiKey, apiSecret)
 	client.OAuthToken = oauthToken
 	client.OAuthTokenSecret = oauthTokenSecret
@@ -256,6 +269,7 @@ func uploadFile(filename string) string {
 		return ""
 	}
 	photoId := response.ID
+	recordUpload(filename, photoId)
 	fmt.Printf("Uploaded photo '%s'\n", title)
 
 	// set date posted to the date that the photo was taken so that it's in the right place
@@ -285,4 +299,88 @@ func uploadFile(filename string) string {
 	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
+}
+
+// Has this file been uploaded to Flickr?
+// Check the `.rodeo-uploaded-files` file that resides in the same directory as `filename`
+func getUploadedPhotoId(filename string) string {
+	directory := filepath.Dir(filename)
+	uploadedFilesFilename := directory + "/" + uploadedFilesBaseFilename;
+
+	// Does the file exist?
+	if _, err := os.Stat(uploadedFilesFilename); os.IsNotExist(err) {
+		// File does not exist, therefore the image has not been uploaded to Flickr
+		return ""
+	}
+
+	// Read file
+	data, err := ioutil.ReadFile(uploadedFilesFilename)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return ""
+	}
+
+	filenames := make(map[string]string)
+
+	err = json.Unmarshal(data, &filenames)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	imageFilename := filepath.Base(filename)
+
+	// Is imageFilename a key in the map?
+	if photoId, ok := filenames[imageFilename]; ok {
+		// imageFilename exists, return its associated photoId
+		return photoId
+	}
+
+	return ""
+}
+
+// Record the filename of the image uploaded to `uploadedFilesBaseFilename`
+func recordUpload(filename string, photoId string) {
+	directory := filepath.Dir(filename)
+	uploadedFilesFilename := directory + "/" + uploadedFilesBaseFilename;
+
+	filenames := make(map[string]string)
+
+	// Does the file exist?
+	if _, err := os.Stat(uploadedFilesFilename); err == nil || os.IsExist(err) {
+		// File exists - therefore read it
+		data, err := ioutil.ReadFile(uploadedFilesFilename)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			// Todo: return an error
+			return
+		}
+
+		err = json.Unmarshal(data, &filenames)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+	}
+
+	// Append filename if it is not already in the list
+	imageFilename := filepath.Base(filename)
+	if _, ok := filenames[imageFilename]; ok {
+		// Filename is already in the list
+		return
+	}
+
+	// Filename not in list, so add to list and save
+	filenames[imageFilename] = photoId
+
+	// Convert to JSON
+	data, err := json.MarshalIndent(filenames, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	// Write to disk
+	err = ioutil.WriteFile(uploadedFilesFilename, data, 0664)
+	if err != nil {
+		fmt.Printf("Error: Unable to write %s: $v", filepath.Base(uploadedFilesFilename), err)
+		return
+	}
 }
