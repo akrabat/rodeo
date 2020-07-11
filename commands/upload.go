@@ -99,7 +99,7 @@ func uploadFile(filename string, forceUpload bool) string {
 	}
 
 	// Has this image been uploaded before?
-	if uploadedPhotoId := getUploadedPhotoId(filename, config.Upload.StoreUploadFilesInImageDirectory); uploadedPhotoId != "" {
+	if uploadedPhotoId := getUploadedPhotoId(filename, config.Upload.StoreUploadFilesInImageDir); uploadedPhotoId != "" {
 		fmt.Print("This image has already been uploaded to Flickr.")
 		if forceUpload == true {
 			fmt.Println(" Forcing upload.")
@@ -272,7 +272,7 @@ func uploadFile(filename string, forceUpload bool) string {
 		return ""
 	}
 	photoId := response.ID
-	recordUpload(filename, photoId, config.Upload.StoreUploadFilesInImageDirectory)
+	recordUpload(filename, photoId, config.Upload.StoreUploadFilesInImageDir)
 	fmt.Printf("Uploaded photo '%s'\n", title)
 
 	// set date posted to the date that the photo was taken so that it's in the right place

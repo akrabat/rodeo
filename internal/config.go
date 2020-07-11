@@ -23,8 +23,8 @@ type Flickr struct {
 }
 
 type Upload struct {
-	SetDatePosted  bool `mapstructure:"set_date_posted"`
-	StoreUploadFilesInImageDirectory  bool `mapstructure:"store_uploaded_files_in_image_directory"`
+	SetDatePosted              bool `mapstructure:"set_date_posted"`
+	StoreUploadFilesInImageDir bool `mapstructure:"store_uploaded_files_in_image_dir"`
 }
 
 type Resize struct {
