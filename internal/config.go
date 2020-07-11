@@ -88,6 +88,10 @@ func setDefaults() {
 		viper.Set("upload.set_date_posted", false)
 	}
 
+	if viper.IsSet("upload.store_uploaded_list_in_image_dir") == false {
+		viper.Set("upload.store_uploaded_list_in_image_dir", false)
+	}
+
 	if viper.IsSet("cmd.convert") == false {
 		viper.Set("cmd.convert", "/usr/local/bin/convert")
 	}
