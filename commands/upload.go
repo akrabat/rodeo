@@ -13,31 +13,28 @@ image to Flickr.
 package commands
 
 import (
+	"encoding/json"
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gopkg.in/masci/flickr.v2"
-	"gopkg.in/masci/flickr.v2/photosets"
 	"gopkg.in/masci/flickr.v2/photos"
+	"gopkg.in/masci/flickr.v2/photosets"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
+const uploadedListBaseFilename = "rodeo-uploaded-files.json"
+
 func init() {
 	rootCmd.AddCommand(uploadCmd)
 
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// uploadCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// uploadCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// Register --force
+	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 }
 
 // uploadCmd represents the upload command
@@ -58,24 +55,30 @@ var uploadCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
+		// Read the value of --force (if it is missing, the value is false)
+		forceUpload, err := cmd.Flags().GetBool("force")
+		if err != nil {
+			forceUpload = false
+		}
+
 		var photoIds []string
 		for _, filename := range args {
-			photoId := uploadFile(filename)
+			photoId := uploadFile(filename, forceUpload)
 			if photoId != "" {
 				photoIds = append(photoIds, photoId)
 			}
 		}
+
 		fmt.Println("All Done")
+		fmt.Printf("View: http://www.flickr.com/photos/%s'\n", viper.GetString("flickr.username"))
 
 		if len(photoIds) > 0 {
-			username := viper.GetString("flickr.username")
 			fmt.Printf("Edit: http://www.flickr.com/photos/upload/edit/?ids=%s\n", strings.Join(photoIds, ","))
-			fmt.Printf("View: http://www.flickr.com/photos/%s'\n", username)
 		}
 	},
 }
 
-func uploadFile(filename string) string {
+func uploadFile(filename string, forceUpload bool) string {
 	fmt.Println("Processing " + filename)
 
 	config := GetConfig()
@@ -93,6 +96,18 @@ func uploadFile(filename string) string {
 		fmt.Println("Error: cmd.exiftool needs to be configured.")
 		fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
 		os.Exit(2)
+	}
+
+	// Has this image been uploaded before?
+	if uploadedPhotoId := getUploadedPhotoId(filename, config.Upload.StoreUploadListInImageDir); uploadedPhotoId != "" {
+		fmt.Print("This image has already been uploaded to Flickr.")
+		if forceUpload == true {
+			fmt.Println(" Forcing upload.")
+		} else {
+			fmt.Printf("\nView this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, uploadedPhotoId)
+			fmt.Println("")
+			return ""
+		}
 	}
 
 	info, err := GetImageInfo(filename, exiftool)
@@ -217,6 +232,7 @@ func uploadFile(filename string) string {
 
 	// Upload file to Flickr
 	fmt.Println("Uploading photo to Flickr")
+
 	client := flickr.NewFlickrClient(apiKey, apiSecret)
 	client.OAuthToken = oauthToken
 	client.OAuthTokenSecret = oauthTokenSecret
@@ -256,6 +272,7 @@ func uploadFile(filename string) string {
 		return ""
 	}
 	photoId := response.ID
+	recordUpload(filename, photoId, config.Upload.StoreUploadListInImageDir)
 	fmt.Printf("Uploaded photo '%s'\n", title)
 
 	// set date posted to the date that the photo was taken so that it's in the right place
@@ -285,4 +302,87 @@ func uploadFile(filename string) string {
 	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
+}
+
+func getUploadedListFilename(imageFilename string, storeUploadListInImageDirectory bool) string {
+	var directory string
+
+	if storeUploadListInImageDirectory {
+		// File is stored in directory where image is and is hidden via a leading `.` on the imageFilename
+		directory = filepath.Dir(imageFilename)
+		return directory + "/." + uploadedListBaseFilename;
+	}
+
+	// Storing to the config directory
+	return ConfigDir() + "/" + uploadedListBaseFilename;
+}
+
+// Has this file been uploaded to Flickr?
+// Check the `.rodeo-uploaded-files` file that resides in the same directory as `filename`
+func getUploadedPhotoId(filename string, storeUploadedListInImageDirectory bool) string {
+	uploadedListFilename := getUploadedListFilename(filename, storeUploadedListInImageDirectory)
+	filenames := readUploadedListFile(uploadedListFilename)
+
+	// Is imageFilename a key in the map?
+	imageFilename := filepath.Base(filename)
+	if photoId, ok := filenames[imageFilename]; ok {
+		// imageFilename exists, return its associated photoId
+		return photoId
+	}
+
+	return ""
+}
+
+// Record the filename of the image uploaded into the uploaded list
+func recordUpload(filename string, photoId string, storeUploadedListInImageDirectory bool) {
+	imageFilename := filepath.Base(filename)
+	uploadedListFilename := getUploadedListFilename(filename, storeUploadedListInImageDirectory)
+	filenames := readUploadedListFile(uploadedListFilename)
+
+	// If the imageFilename is already recorded, then there's nothing to do
+	if _, ok := filenames[imageFilename]; ok {
+		return
+	}
+
+	// Filename not in list, so append to list and save
+	filenames[imageFilename] = photoId
+	writeUploadedListFile(filenames, uploadedListFilename)
+}
+
+// Read the uploaded list from the `uploadedListFilename` and convert to a map from the JSON
+func readUploadedListFile(uploadedListFilename string) map[string]string {
+	filenames := make(map[string]string)
+
+	// Does the file exist?
+	if _, err := os.Stat(uploadedListFilename); err == nil || os.IsExist(err) {
+		// File exists - therefore read it
+		data, err := ioutil.ReadFile(uploadedListFilename)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return filenames
+		}
+
+		err = json.Unmarshal(data, &filenames)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+	}
+
+	return filenames
+}
+
+// Write the uploaded list to the `uploadedListFilename` in JSON format
+func writeUploadedListFile(filenames map[string]string, uploadedListFilename string) {
+	// Convert to JSON
+	data, err := json.MarshalIndent(filenames, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	// Write to disk
+	err = ioutil.WriteFile(uploadedListFilename, data, 0664)
+	if err != nil {
+		fmt.Printf("Error: Unable to write %s: %v", filepath.Base(uploadedListFilename), err)
+		return
+	}
 }

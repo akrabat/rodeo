@@ -23,7 +23,8 @@ type Flickr struct {
 }
 
 type Upload struct {
-	SetDatePosted  bool `mapstructure:"set_date_posted"`
+	SetDatePosted             bool `mapstructure:"set_date_posted"`
+	StoreUploadListInImageDir bool `mapstructure:"store_uploaded_list_in_image_dir"`
 }
 
 type Resize struct {
@@ -85,6 +86,10 @@ func setDefaults() {
 
 	if viper.IsSet("upload.set_date_posted") == false {
 		viper.Set("upload.set_date_posted", false)
+	}
+
+	if viper.IsSet("upload.store_uploaded_list_in_image_dir") == false {
+		viper.Set("upload.store_uploaded_list_in_image_dir", false)
 	}
 
 	if viper.IsSet("cmd.convert") == false {
