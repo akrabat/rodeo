@@ -335,31 +335,18 @@ func getUploadedPhotoId(filename string, storeUploadFilesInImageDirectory bool) 
 
 // Record the filename of the image uploaded to `uploadedFilesBaseFilename`
 func recordUpload(filename string, photoId string, storeUploadFilesInImageDirectory bool) {
+	imageFilename := filepath.Base(filename)
 	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
 	filenames := readUploadedFilesFile(uploadedFilesFilename)
 
-	// Append filename if it is not already in the list
-	imageFilename := filepath.Base(filename)
+	// If the imageFilename is already recorded, then there's nothing to do
 	if _, ok := filenames[imageFilename]; ok {
-		// Filename is already in the list
 		return
 	}
 
-	// Filename not in list, so add to list and save
+	// Filename not in list, so append to list and save
 	filenames[imageFilename] = photoId
-
-	// Convert to JSON
-	data, err := json.MarshalIndent(filenames, "", "  ")
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	// Write to disk
-	err = ioutil.WriteFile(uploadedFilesFilename, data, 0664)
-	if err != nil {
-		fmt.Printf("Error: Unable to write %s: $v", filepath.Base(uploadedFilesFilename), err)
-		return
-	}
+	writeUploadedFilesFile(filenames, uploadedFilesFilename)
 }
 
 // Read the uploaded files list from the `uploadedFilesFilename` and convert to a map from the JSON
@@ -382,4 +369,20 @@ func readUploadedFilesFile(uploadedFilesFilename string) map[string]string {
 	}
 
 	return filenames
+}
+
+// Write the uploaded files list to the `uploadedFilesFilename` in JSON format
+func writeUploadedFilesFile(filenames map[string]string, uploadedFilesFilename string) {
+	// Convert to JSON
+	data, err := json.MarshalIndent(filenames, "", "  ")
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	// Write to disk
+	err = ioutil.WriteFile(uploadedFilesFilename, data, 0664)
+	if err != nil {
+		fmt.Printf("Error: Unable to write %s: $v", filepath.Base(uploadedFilesFilename), err)
+		return
+	}
 }
