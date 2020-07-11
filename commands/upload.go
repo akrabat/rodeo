@@ -28,7 +28,7 @@ import (
 	"strings"
 )
 
-const uploadedFilesBaseFilename = ".rodeo-uploaded-files.json"
+const uploadedFilesBaseFilename = "rodeo-uploaded-files.json"
 
 func init() {
 	rootCmd.AddCommand(uploadCmd)
@@ -99,7 +99,7 @@ func uploadFile(filename string, forceUpload bool) string {
 	}
 
 	// Has this image been uploaded before?
-	if uploadedPhotoId := getUploadedPhotoId(filename); uploadedPhotoId != "" {
+	if uploadedPhotoId := getUploadedPhotoId(filename, config.Upload.StoreUploadFilesInImageDirectory); uploadedPhotoId != "" {
 		fmt.Print("This image has already been uploaded to Flickr.")
 		if forceUpload == true {
 			fmt.Println(" Forcing upload.")
@@ -272,7 +272,7 @@ func uploadFile(filename string, forceUpload bool) string {
 		return ""
 	}
 	photoId := response.ID
-	recordUpload(filename, photoId)
+	recordUpload(filename, photoId, config.Upload.StoreUploadFilesInImageDirectory)
 	fmt.Printf("Uploaded photo '%s'\n", title)
 
 	// set date posted to the date that the photo was taken so that it's in the right place
@@ -304,11 +304,23 @@ func uploadFile(filename string, forceUpload bool) string {
 	return photoId
 }
 
+func getUploadedFilesFilename(imageFilename string, storeUploadFilesInImageDirectory bool) string {
+	var directory string
+
+	if storeUploadFilesInImageDirectory {
+		// File is stored in directory where image is and is hidden via a leading `.` on the imageFilename
+		directory = filepath.Dir(imageFilename)
+		return directory + "/." + uploadedFilesBaseFilename;
+	}
+
+	// Storing to the config directory
+	return ConfigDir() + "/" + uploadedFilesBaseFilename;
+}
+
 // Has this file been uploaded to Flickr?
 // Check the `.rodeo-uploaded-files` file that resides in the same directory as `filename`
-func getUploadedPhotoId(filename string) string {
-	directory := filepath.Dir(filename)
-	uploadedFilesFilename := directory + "/" + uploadedFilesBaseFilename;
+func getUploadedPhotoId(filename string, storeUploadFilesInImageDirectory bool) string {
+	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
 
 	// Does the file exist?
 	if _, err := os.Stat(uploadedFilesFilename); os.IsNotExist(err) {
@@ -342,10 +354,8 @@ func getUploadedPhotoId(filename string) string {
 }
 
 // Record the filename of the image uploaded to `uploadedFilesBaseFilename`
-func recordUpload(filename string, photoId string) {
-	directory := filepath.Dir(filename)
-	uploadedFilesFilename := directory + "/" + uploadedFilesBaseFilename;
-
+func recordUpload(filename string, photoId string, storeUploadFilesInImageDirectory bool) {
+	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
 	filenames := make(map[string]string)
 
 	// Does the file exist?
