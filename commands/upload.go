@@ -321,30 +321,10 @@ func getUploadedFilesFilename(imageFilename string, storeUploadFilesInImageDirec
 // Check the `.rodeo-uploaded-files` file that resides in the same directory as `filename`
 func getUploadedPhotoId(filename string, storeUploadFilesInImageDirectory bool) string {
 	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
-
-	// Does the file exist?
-	if _, err := os.Stat(uploadedFilesFilename); os.IsNotExist(err) {
-		// File does not exist, therefore the image has not been uploaded to Flickr
-		return ""
-	}
-
-	// Read file
-	data, err := ioutil.ReadFile(uploadedFilesFilename)
-	if err != nil {
-		fmt.Printf("Error: %v\n", err)
-		return ""
-	}
-
-	filenames := make(map[string]string)
-
-	err = json.Unmarshal(data, &filenames)
-	if err != nil {
-		fmt.Println("error:", err)
-	}
-
-	imageFilename := filepath.Base(filename)
+	filenames := readUploadedFilesFile(uploadedFilesFilename)
 
 	// Is imageFilename a key in the map?
+	imageFilename := filepath.Base(filename)
 	if photoId, ok := filenames[imageFilename]; ok {
 		// imageFilename exists, return its associated photoId
 		return photoId
@@ -356,23 +336,7 @@ func getUploadedPhotoId(filename string, storeUploadFilesInImageDirectory bool) 
 // Record the filename of the image uploaded to `uploadedFilesBaseFilename`
 func recordUpload(filename string, photoId string, storeUploadFilesInImageDirectory bool) {
 	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
-	filenames := make(map[string]string)
-
-	// Does the file exist?
-	if _, err := os.Stat(uploadedFilesFilename); err == nil || os.IsExist(err) {
-		// File exists - therefore read it
-		data, err := ioutil.ReadFile(uploadedFilesFilename)
-		if err != nil {
-			fmt.Printf("Error: %v\n", err)
-			// Todo: return an error
-			return
-		}
-
-		err = json.Unmarshal(data, &filenames)
-		if err != nil {
-			fmt.Println("error:", err)
-		}
-	}
+	filenames := readUploadedFilesFile(uploadedFilesFilename)
 
 	// Append filename if it is not already in the list
 	imageFilename := filepath.Base(filename)
@@ -396,4 +360,26 @@ func recordUpload(filename string, photoId string, storeUploadFilesInImageDirect
 		fmt.Printf("Error: Unable to write %s: $v", filepath.Base(uploadedFilesFilename), err)
 		return
 	}
+}
+
+// Read the uploaded files list from the `uploadedFilesFilename` and convert to a map from the JSON
+func readUploadedFilesFile(uploadedFilesFilename string) map[string]string {
+	filenames := make(map[string]string)
+
+	// Does the file exist?
+	if _, err := os.Stat(uploadedFilesFilename); err == nil || os.IsExist(err) {
+		// File exists - therefore read it
+		data, err := ioutil.ReadFile(uploadedFilesFilename)
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+			return filenames
+		}
+
+		err = json.Unmarshal(data, &filenames)
+		if err != nil {
+			fmt.Println("error:", err)
+		}
+	}
+
+	return filenames
 }
