@@ -26,7 +26,7 @@ rodeo upload <files...>
 Rodeo keeps track of which files it has uploaded in 
 `~/.config/rodeo/rodeo-uploaded-files.json` or in `.rodeo-uploaded-files.json`
 in the directory of the image file. This is controlled by the config setting
-`upload.store_uploaded_files_in_image_dir`.
+`upload.store_uploaded_list_in_image_dir`.
 
 ### rodeo resize
 
@@ -123,7 +123,7 @@ flickr:
 # Configuration for `rodeo upload`
 upload:
    set_date_posted: false
-   store_uploaded_files_in_image_dir: false
+   store_uploaded_list_in_image_dir: false
 
 # Configuration for `rodeo resize`
 resize:
@@ -180,7 +180,7 @@ run of `rodeo`
 | Property          | What it does                                                                          |
 | ----------------- | ------------------------------------------------------------------------------------- |
 | `set_date_posted` | If set to `true`, then the date posted is set to the date captured. Default is `false`. |
-| `store_uploaded_files_in_image_dir` | If set to `true`, then the list of uploaded files is stored in `.rodeo-uploaded-files.json` within the images directory. Otherwise it is stored in `~/.config/rodeo`. Default is `false`.|
+| `store_uploaded_list_in_image_dir` | If set to `true`, then the list of uploaded files is stored in `.rodeo-uploaded-files.json` within the images directory. Otherwise it is stored in `~/.config/rodeo`. Default is `false`.|
 
 ### Upload rules
 

@@ -28,7 +28,7 @@ import (
 	"strings"
 )
 
-const uploadedFilesBaseFilename = "rodeo-uploaded-files.json"
+const uploadedListBaseFilename = "rodeo-uploaded-files.json"
 
 func init() {
 	rootCmd.AddCommand(uploadCmd)
@@ -99,7 +99,7 @@ func uploadFile(filename string, forceUpload bool) string {
 	}
 
 	// Has this image been uploaded before?
-	if uploadedPhotoId := getUploadedPhotoId(filename, config.Upload.StoreUploadFilesInImageDir); uploadedPhotoId != "" {
+	if uploadedPhotoId := getUploadedPhotoId(filename, config.Upload.StoreUploadListInImageDir); uploadedPhotoId != "" {
 		fmt.Print("This image has already been uploaded to Flickr.")
 		if forceUpload == true {
 			fmt.Println(" Forcing upload.")
@@ -272,7 +272,7 @@ func uploadFile(filename string, forceUpload bool) string {
 		return ""
 	}
 	photoId := response.ID
-	recordUpload(filename, photoId, config.Upload.StoreUploadFilesInImageDir)
+	recordUpload(filename, photoId, config.Upload.StoreUploadListInImageDir)
 	fmt.Printf("Uploaded photo '%s'\n", title)
 
 	// set date posted to the date that the photo was taken so that it's in the right place
@@ -304,24 +304,24 @@ func uploadFile(filename string, forceUpload bool) string {
 	return photoId
 }
 
-func getUploadedFilesFilename(imageFilename string, storeUploadFilesInImageDirectory bool) string {
+func getUploadedListFilename(imageFilename string, storeUploadListInImageDirectory bool) string {
 	var directory string
 
-	if storeUploadFilesInImageDirectory {
+	if storeUploadListInImageDirectory {
 		// File is stored in directory where image is and is hidden via a leading `.` on the imageFilename
 		directory = filepath.Dir(imageFilename)
-		return directory + "/." + uploadedFilesBaseFilename;
+		return directory + "/." + uploadedListBaseFilename;
 	}
 
 	// Storing to the config directory
-	return ConfigDir() + "/" + uploadedFilesBaseFilename;
+	return ConfigDir() + "/" + uploadedListBaseFilename;
 }
 
 // Has this file been uploaded to Flickr?
 // Check the `.rodeo-uploaded-files` file that resides in the same directory as `filename`
-func getUploadedPhotoId(filename string, storeUploadFilesInImageDirectory bool) string {
-	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
-	filenames := readUploadedFilesFile(uploadedFilesFilename)
+func getUploadedPhotoId(filename string, storeUploadedListInImageDirectory bool) string {
+	uploadedListFilename := getUploadedListFilename(filename, storeUploadedListInImageDirectory)
+	filenames := readUploadedListFile(uploadedListFilename)
 
 	// Is imageFilename a key in the map?
 	imageFilename := filepath.Base(filename)
@@ -333,11 +333,11 @@ func getUploadedPhotoId(filename string, storeUploadFilesInImageDirectory bool) 
 	return ""
 }
 
-// Record the filename of the image uploaded to `uploadedFilesBaseFilename`
-func recordUpload(filename string, photoId string, storeUploadFilesInImageDirectory bool) {
+// Record the filename of the image uploaded into the uploaded list
+func recordUpload(filename string, photoId string, storeUploadedListInImageDirectory bool) {
 	imageFilename := filepath.Base(filename)
-	uploadedFilesFilename := getUploadedFilesFilename(filename, storeUploadFilesInImageDirectory)
-	filenames := readUploadedFilesFile(uploadedFilesFilename)
+	uploadedListFilename := getUploadedListFilename(filename, storeUploadedListInImageDirectory)
+	filenames := readUploadedListFile(uploadedListFilename)
 
 	// If the imageFilename is already recorded, then there's nothing to do
 	if _, ok := filenames[imageFilename]; ok {
@@ -346,17 +346,17 @@ func recordUpload(filename string, photoId string, storeUploadFilesInImageDirect
 
 	// Filename not in list, so append to list and save
 	filenames[imageFilename] = photoId
-	writeUploadedFilesFile(filenames, uploadedFilesFilename)
+	writeUploadedListFile(filenames, uploadedListFilename)
 }
 
-// Read the uploaded files list from the `uploadedFilesFilename` and convert to a map from the JSON
-func readUploadedFilesFile(uploadedFilesFilename string) map[string]string {
+// Read the uploaded list from the `uploadedListFilename` and convert to a map from the JSON
+func readUploadedListFile(uploadedListFilename string) map[string]string {
 	filenames := make(map[string]string)
 
 	// Does the file exist?
-	if _, err := os.Stat(uploadedFilesFilename); err == nil || os.IsExist(err) {
+	if _, err := os.Stat(uploadedListFilename); err == nil || os.IsExist(err) {
 		// File exists - therefore read it
-		data, err := ioutil.ReadFile(uploadedFilesFilename)
+		data, err := ioutil.ReadFile(uploadedListFilename)
 		if err != nil {
 			fmt.Printf("Error: %v\n", err)
 			return filenames
@@ -371,8 +371,8 @@ func readUploadedFilesFile(uploadedFilesFilename string) map[string]string {
 	return filenames
 }
 
-// Write the uploaded files list to the `uploadedFilesFilename` in JSON format
-func writeUploadedFilesFile(filenames map[string]string, uploadedFilesFilename string) {
+// Write the uploaded list to the `uploadedListFilename` in JSON format
+func writeUploadedListFile(filenames map[string]string, uploadedListFilename string) {
 	// Convert to JSON
 	data, err := json.MarshalIndent(filenames, "", "  ")
 	if err != nil {
@@ -380,9 +380,9 @@ func writeUploadedFilesFile(filenames map[string]string, uploadedFilesFilename s
 	}
 
 	// Write to disk
-	err = ioutil.WriteFile(uploadedFilesFilename, data, 0664)
+	err = ioutil.WriteFile(uploadedListFilename, data, 0664)
 	if err != nil {
-		fmt.Printf("Error: Unable to write %s: $v", filepath.Base(uploadedFilesFilename), err)
+		fmt.Printf("Error: Unable to write %s: %v", filepath.Base(uploadedListFilename), err)
 		return
 	}
 }
