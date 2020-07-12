@@ -52,6 +52,7 @@ do
         zip $zip_name.zip $output_name
         rm $output_name
     else
+        chmod a+x $output_name
         gzip $output_name
     fi
     popd > /dev/null
