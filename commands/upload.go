@@ -35,6 +35,7 @@ func init() {
 
 	// Register --force
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
+	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
 }
 
 // uploadCmd represents the upload command
@@ -61,9 +62,15 @@ var uploadCmd = &cobra.Command{
 			forceUpload = false
 		}
 
+		// Read the value of --force (if it is missing, the value is false)
+		dryRun, err := cmd.Flags().GetBool("dry-run")
+		if err != nil {
+			dryRun = false
+		}
+
 		var photoIds []string
 		for _, filename := range args {
-			photoId := uploadFile(filename, forceUpload)
+			photoId := uploadFile(filename, forceUpload, dryRun)
 			if photoId != "" {
 				photoIds = append(photoIds, photoId)
 			}
@@ -78,7 +85,7 @@ var uploadCmd = &cobra.Command{
 	},
 }
 
-func uploadFile(filename string, forceUpload bool) string {
+func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 	fmt.Println("Processing " + filename)
 
 	config := GetConfig()
@@ -211,6 +218,12 @@ func uploadFile(filename string, forceUpload bool) string {
 			fmt.Printf("  - albums to add to: %s\n", strings.Join(strs, ", "))
 		}
 		fmt.Printf("\n")
+	}
+
+	// All ready to process now
+	if dryRun {
+		fmt.Println("Would upload photo to Flickr")
+		return ""
 	}
 
 	if len(keywordsToRemove) > 0 && exiftool != "" {
