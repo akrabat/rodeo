@@ -48,8 +48,20 @@ func (a Album) String() string {
 	return fmt.Sprintf("%s (%s)", a.Name, a.Id)
 }
 
+type Permissions struct {
+	Family  bool
+	Friends bool
+	Public  bool
+}
+func (p *Permissions) SetDefaults() {
+	p.Family = true
+	p.Friends = true
+	p.Public = true
+}
+
 type Action struct {
 	Delete bool
+	Privacy *Permissions
 	Albums []Album
 }
 type Rules struct {
