@@ -126,6 +126,8 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 	var keywordsToRemove []string
 	var keywordsToAdd []string
 	var albumsToAddTo []Album
+	var privacy Permissions
+	privacy.SetDefaults()
 
 	if config.Rules != nil {
 		for _, rule := range config.Rules {
@@ -187,6 +189,9 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 				if rule.Action.Delete {
 					keywordsToRemove = append(keywordsToRemove, intersection...)
 				}
+				if rule.Action.Privacy != nil {
+					privacy = *rule.Action.Privacy
+				}
 				if len(rule.Action.Albums) > 0 {
 					for _, album := range rule.Action.Albums {
 						albumsToAddTo = append(albumsToAddTo, album)
@@ -210,6 +215,9 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 		if len(keywordsToRemove) > 0 {
 			fmt.Printf("  - keywords to remove: %s\n", strings.Join(keywordsToRemove, ", "))
 		}
+
+		fmt.Printf("  - privacy will be set to: Family: %v, Friends: %v, Public: %v\n", privacy.Family, privacy.Friends, privacy.Public)
+
 		if len(albumsToAddTo) > 0 {
 			strs := make([]string, len(albumsToAddTo))
 			for i, a := range albumsToAddTo {
@@ -268,9 +276,9 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 	params := flickr.UploadParams{
 		Title:       title,
 		Tags:        tags,
-		IsPublic:    true,
-		IsFamily:    true,
-		IsFriend:    true,
+		IsFamily:    privacy.Family,
+		IsFriend:    privacy.Friends,
+		IsPublic:    privacy.Public,
 		ContentType: 1, // photo
 		Hidden:      1, // not hidden
 		SafetyLevel: 1, // safe
