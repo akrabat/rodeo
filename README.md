@@ -156,6 +156,10 @@ rules:
         - {keyword4}
     action:
       delete: true # deletes {keyword3} and/or {keyword4}
+      privacy:
+        family: true
+        friends: true
+        public: true
 ```
 
 ### Resize configuration
@@ -199,9 +203,10 @@ For each rules there are up to four conditions and two actions:
 
 Each action is independent. One may exist or both.
 
-| Action   | What it does                                                                         |
-| -------- | ------------------------------------------------------------------------------------ |
-| `delete` | When `true`, deletes the keyword from the file so that it does not exist on Flickr.  |
-| `albums` | List of `id` and `name` for the albums that this image will be added to.             |
+| Action    | What it does                                                                         |
+| --------- | ------------------------------------------------------------------------------------ |
+| `delete`  | When `true`, deletes the keyword from the file so that it does not exist on Flickr.  |
+| `albums`  | List of `id` and `name` for the albums that this image will be added to.             |
+| `privacy` | Set the permissions on the photo for `family`, `friends` and `public`.               |
 
 
