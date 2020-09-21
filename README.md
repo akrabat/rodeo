@@ -55,7 +55,7 @@ $ rodeo info <files...>
 | --- | --- |
 | `rodeo viewconfig` | Display Rodeo's configuration. |
 | `rodeo authenticate` | Authenticate with Flickr. |
-| `rodeo listalbums` | List albums (helpful to find album IDs. |
+| `rodeo listalbums` | List albums (helpful to find album IDs. Accepts `--filter` to search the results. |
 
 
 ## Installation
