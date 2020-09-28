@@ -33,7 +33,7 @@ const uploadedListBaseFilename = "rodeo-uploaded-files.json"
 func init() {
 	rootCmd.AddCommand(uploadCmd)
 
-	// Register --force
+	// Register command line options
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
 }
@@ -62,7 +62,7 @@ var uploadCmd = &cobra.Command{
 			forceUpload = false
 		}
 
-		// Read the value of --force (if it is missing, the value is false)
+		// Read the value of --dry-run (if it is missing, the value is false)
 		dryRun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
 			dryRun = false
