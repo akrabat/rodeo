@@ -17,10 +17,13 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/masci/flickr.v2"
 	"gopkg.in/masci/flickr.v2/photosets"
+	"strings"
 )
 
 func init() {
 	rootCmd.AddCommand(listAlbumsCmd)
+
+	listAlbumsCmd.Flags().String("filter", "", "Filter the list of ablums")
 }
 
 var listAlbumsCmd = &cobra.Command{
@@ -28,12 +31,21 @@ var listAlbumsCmd = &cobra.Command{
 	Short: "List Flickr albums",
 	Long: `List Flickr albums`,
 	Run: func(cmd *cobra.Command, args []string) {
-		listAlbums()
+		filter, err := cmd.Flags().GetString("filter")
+		if err != nil {
+			filter = ""
+		}
+
+		listAlbums(filter)
 	},
 }
 
-func listAlbums() {
-	fmt.Println("Listing Flickr albums")
+func listAlbums(filter string) {
+	fmt.Print("Flickr albums")
+	if filter != "" {
+		fmt.Printf(" (filtered by %s)", filter)
+	}
+	fmt.Print("\n")
 
 	config := GetConfig()
 	apiKey := config.Flickr.ApiKey
@@ -56,13 +68,17 @@ func listAlbums() {
 		return
 	}
 
-	photosets := response.Photosets;
-	if photosets.Pages > 1 {
-		fmt.Println("More photosets are available, but getting the second page is not implemented yet")
+	albums := response.Photosets;
+	if albums.Pages > 1 {
+		fmt.Println("More albums are available, but getting the second page is not implemented yet")
 	}
 
-	for num, photoset := range photosets.Items {
-		fmt.Printf("%d: %s (%s)\n", num+1, photoset.Title, photoset.Id)
+	index := 0
+	for _, album := range albums.Items {
+		if strings.Contains(strings.ToLower(album.Title), strings.ToLower(filter)) {
+			index += 1
+			fmt.Printf("%3d: %s (%s)\n", index, album.Title, album.Id)
+		}
 	}
 
 	fmt.Println("")
