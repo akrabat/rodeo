@@ -23,7 +23,7 @@ import (
 func init() {
 	rootCmd.AddCommand(listAlbumsCmd)
 
-	listAlbumsCmd.Flags().String("filter", "", "Filter the list of ablums")
+	listAlbumsCmd.Flags().String("filter", "", "Filter the list of albums")
 }
 
 var listAlbumsCmd = &cobra.Command{
