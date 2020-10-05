@@ -14,6 +14,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
@@ -36,6 +37,7 @@ func init() {
 	// Register command line options
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
+	uploadCmd.Flags().String("album", "", "Add to specific album, e.g. --album 12345678")
 }
 
 // uploadCmd represents the upload command
@@ -68,9 +70,17 @@ var uploadCmd = &cobra.Command{
 			dryRun = false
 		}
 
+		// Read the value of --album (if it is missing, the value is empty)
+		albumId, _ := cmd.Flags().GetString("album")
+		album, err := getAlbum(albumId)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
 		var photoIds []string
 		for _, filename := range args {
-			photoId := uploadFile(filename, forceUpload, dryRun)
+			photoId := uploadFile(filename, forceUpload, dryRun, album)
 			if photoId != "" {
 				photoIds = append(photoIds, photoId)
 			}
@@ -85,18 +95,10 @@ var uploadCmd = &cobra.Command{
 	},
 }
 
-func uploadFile(filename string, forceUpload bool, dryRun bool) string {
+func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) string {
 	fmt.Println("Processing " + filename)
 
 	config := GetConfig()
-
-	apiKey := config.Flickr.ApiKey
-	apiSecret := config.Flickr.ApiSecret
-	oauthToken := config.Flickr.OauthToken
-	oauthTokenSecret := config.Flickr.OauthSecret
-	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" {
-		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
-	}
 
 	exiftool := config.Cmd.Exiftool
 	if exiftool == "" {
@@ -128,6 +130,10 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 	var albumsToAddTo []Album
 	var privacy Permissions
 	privacy.SetDefaults()
+
+	if album.Id != "" {
+		albumsToAddTo = append(albumsToAddTo, album)
+	}
 
 	if config.Rules != nil {
 		for _, rule := range config.Rules {
@@ -193,8 +199,8 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 					privacy = *rule.Action.Privacy
 				}
 				if len(rule.Action.Albums) > 0 {
-					for _, album := range rule.Action.Albums {
-						albumsToAddTo = append(albumsToAddTo, album)
+					for _, thisAlbum := range rule.Action.Albums {
+						albumsToAddTo = append(albumsToAddTo, thisAlbum)
 					}
 				}
 			}
@@ -254,9 +260,11 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 	// Upload file to Flickr
 	fmt.Println("Uploading photo to Flickr")
 
-	client := flickr.NewFlickrClient(apiKey, apiSecret)
-	client.OAuthToken = oauthToken
-	client.OAuthTokenSecret = oauthTokenSecret
+	client, err := getFlickrClient()
+	if err != nil {
+		fmt.Println(err)
+		return ""
+	}
 
 	title := strings.Trim(info.Title, " ")
 	if title == "" {
@@ -323,6 +331,25 @@ func uploadFile(filename string, forceUpload bool, dryRun bool) string {
 	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
+}
+
+func getFlickrClient() (*flickr.FlickrClient, error) {
+	config := GetConfig()
+
+	apiKey := config.Flickr.ApiKey
+	apiSecret := config.Flickr.ApiSecret
+	oauthToken := config.Flickr.OauthToken
+	oauthTokenSecret := config.Flickr.OauthSecret
+	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" {
+		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
+		return nil, errors.New("credentials not set")
+	}
+
+	client := flickr.NewFlickrClient(apiKey, apiSecret)
+	client.OAuthToken = oauthToken
+	client.OAuthTokenSecret = oauthTokenSecret
+
+	return client, nil
 }
 
 func getUploadedListFilename(imageFilename string, storeUploadListInImageDirectory bool) string {
@@ -406,4 +433,28 @@ func writeUploadedListFile(filenames map[string]string, uploadedListFilename str
 		fmt.Printf("Error: Unable to write %s: %v", filepath.Base(uploadedListFilename), err)
 		return
 	}
+}
+
+func getAlbum(albumId string) (Album, error) {
+	client, err := getFlickrClient()
+	if err != nil {
+		fmt.Println(err)
+		return Album{}, err
+	}
+
+	config := GetConfig()
+	userId := config.Flickr.UserId
+
+	response, err := photosets.GetInfo(client, true, albumId, userId)
+	if err != nil {
+		return Album{}, err
+	}
+
+	album := Album{
+		Id:   response.Set.Id,
+		Name: response.Set.Title,
+	}
+
+	return album, nil
+
 }
