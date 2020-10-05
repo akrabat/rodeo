@@ -358,11 +358,11 @@ func getUploadedListFilename(imageFilename string, storeUploadListInImageDirecto
 	if storeUploadListInImageDirectory {
 		// File is stored in directory where image is and is hidden via a leading `.` on the imageFilename
 		directory = filepath.Dir(imageFilename)
-		return directory + "/." + uploadedListBaseFilename;
+		return directory + "/." + uploadedListBaseFilename
 	}
 
 	// Storing to the config directory
-	return ConfigDir() + "/" + uploadedListBaseFilename;
+	return ConfigDir() + "/" + uploadedListBaseFilename
 }
 
 // Has this file been uploaded to Flickr?
