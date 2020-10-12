@@ -74,6 +74,7 @@ var uploadCmd = &cobra.Command{
 		albumId, _ := cmd.Flags().GetString("album")
 		album, err := getAlbum(albumId)
 		if err != nil {
+			fmt.Printf("Could not find album %s\n", albumId)
 			fmt.Println(err)
 			return
 		}
@@ -229,7 +230,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 			for i, a := range albumsToAddTo {
 				strs[i] = a.Name
 			}
-			fmt.Printf("  - albums to add to: %s\n", strings.Join(strs, ", "))
+			fmt.Printf("  - albums to add to: \"%s\"\n", strings.Join(strs, "\", \""))
 		}
 		fmt.Printf("\n")
 	}
@@ -435,7 +436,13 @@ func writeUploadedListFile(filenames map[string]string, uploadedListFilename str
 	}
 }
 
+// Retrieve album from Flickr's API so that we have the full information about it
 func getAlbum(albumId string) (Album, error) {
+	if albumId == "" {
+		// No album to look for! So we return an empty album
+		return Album{}, nil
+	}
+
 	client, err := getFlickrClient()
 	if err != nil {
 		fmt.Println(err)
