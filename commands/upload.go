@@ -14,7 +14,6 @@ package commands
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
@@ -261,7 +260,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 	// Upload file to Flickr
 	fmt.Println("Uploading photo to Flickr")
 
-	client, err := getFlickrClient()
+	client, err := GetFlickrClient()
 	if err != nil {
 		fmt.Println(err)
 		return ""
@@ -332,25 +331,6 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
-}
-
-func getFlickrClient() (*flickr.FlickrClient, error) {
-	config := GetConfig()
-
-	apiKey := config.Flickr.ApiKey
-	apiSecret := config.Flickr.ApiSecret
-	oauthToken := config.Flickr.OauthToken
-	oauthTokenSecret := config.Flickr.OauthSecret
-	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" {
-		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
-		return nil, errors.New("credentials not set")
-	}
-
-	client := flickr.NewFlickrClient(apiKey, apiSecret)
-	client.OAuthToken = oauthToken
-	client.OAuthTokenSecret = oauthTokenSecret
-
-	return client, nil
 }
 
 func getUploadedListFilename(imageFilename string, storeUploadListInImageDirectory bool) string {
@@ -443,7 +423,7 @@ func getAlbum(albumId string) (Album, error) {
 		return Album{}, nil
 	}
 
-	client, err := getFlickrClient()
+	client, err := GetFlickrClient()
 	if err != nil {
 		fmt.Println(err)
 		return Album{}, err
@@ -463,5 +443,4 @@ func getAlbum(albumId string) (Album, error) {
 	}
 
 	return album, nil
-
 }
