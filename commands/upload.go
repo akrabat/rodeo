@@ -230,7 +230,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 			for i, a := range albumsToAddTo {
 				strs[i] = a.Name
 			}
-			fmt.Printf("  - albums to add to: %s\n", strings.Join(strs, ", "))
+			fmt.Printf("  - albums to add to: \"%s\"\n", strings.Join(strs, "\", \""))
 		}
 		fmt.Printf("\n")
 	}
