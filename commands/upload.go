@@ -14,6 +14,7 @@ package commands
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
@@ -73,8 +74,7 @@ var uploadCmd = &cobra.Command{
 		albumId, _ := cmd.Flags().GetString("album")
 		album, err := getAlbum(albumId)
 		if err != nil {
-			fmt.Printf("Could not find album %s\n", albumId)
-			fmt.Println(err)
+			fmt.Printf("Error: %s\n", err)
 			return
 		}
 
@@ -429,18 +429,28 @@ func getAlbum(albumId string) (Album, error) {
 		return Album{}, err
 	}
 
-	config := GetConfig()
-	userId := config.Flickr.UserId
-
-	response, err := photosets.GetInfo(client, true, albumId, userId)
-	if err != nil {
-		return Album{}, err
+	albums := GetAlbums(client, albumId)
+	if len(albums) == 0 {
+		// No albums founds
+		return Album{}, errors.New(fmt.Sprintf("could not find album %s", albumId))
 	}
 
-	album := Album{
-		Id:   response.Set.Id,
-		Name: response.Set.Title,
+	if len(albums) == 1 {
+		// exactly one album found
+		photo := albums[0]
+		album := Album{
+			Id: photo.Id,
+			Name: photo.Title,
+		}
+		return album, nil
 	}
 
-	return album, nil
+	// More than one album has been found, so return list
+	listOfAlbums := "more than one album has been found:\n"
+	for i, album := range albums {
+		listOfAlbums += fmt.Sprintf("%3d: %s (%s)\n", i+1, album.Title, album.Id)
+	}
+
+	return Album{}, errors.New(listOfAlbums)
+
 }
