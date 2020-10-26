@@ -13,6 +13,7 @@ image to Flickr.
 package commands
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -72,10 +74,21 @@ var uploadCmd = &cobra.Command{
 
 		// Read the value of --album (if it is missing, the value is empty)
 		albumId, _ := cmd.Flags().GetString("album")
-		album, err := getAlbum(albumId)
+		albums, err := getAlbums(albumId)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err)
 			return
+		}
+
+		var album Album
+		if len(albums) == 1 {
+			album = albums[0]
+		} else {
+			album, err = chooseAlbumFromList(albums, albumId)
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				return
+			}
 		}
 
 		var photoIds []string
@@ -417,40 +430,57 @@ func writeUploadedListFile(filenames map[string]string, uploadedListFilename str
 }
 
 // Retrieve album from Flickr's API so that we have the full information about it
-func getAlbum(albumId string) (Album, error) {
+func getAlbums(albumId string) ([]Album, error) {
 	if albumId == "" {
 		// No album to look for! So we return an empty album
-		return Album{}, nil
+		return []Album{}, nil
 	}
 
 	client, err := GetFlickrClient()
 	if err != nil {
 		fmt.Println(err)
-		return Album{}, err
+		return []Album{}, err
 	}
 
-	albums := GetAlbums(client, albumId)
-	if len(albums) == 0 {
-		// No albums founds
-		return Album{}, errors.New(fmt.Sprintf("could not find album %s", albumId))
+	photosets := GetAlbums(client, albumId)
+	if len(photosets) == 0 {
+		// No photosets founds
+		return []Album{}, errors.New(fmt.Sprintf("could not find album %s", albumId))
 	}
 
-	if len(albums) == 1 {
-		// exactly one album found
-		photo := albums[0]
+	// At least one photoset found
+	var albums []Album
+	for _, photo := range photosets {
 		album := Album{
 			Id: photo.Id,
 			Name: photo.Title,
 		}
-		return album, nil
+		albums = append(albums, album)
 	}
+	return albums, nil
+}
 
-	// More than one album has been found, so return list
-	listOfAlbums := "more than one album has been found:\n"
+// Display the available albums and allow the user to select one
+func chooseAlbumFromList(albums []Album, albumId string) (Album, error) {
+	fmt.Printf("Available albums that match \"%s\":\n", albumId)
 	for i, album := range albums {
-		listOfAlbums += fmt.Sprintf("%3d: %s (%s)\n", i+1, album.Title, album.Id)
+		fmt.Printf("%3d: %s (%s)\n", i+1, album.Name, album.Id)
 	}
 
-	return Album{}, errors.New(listOfAlbums)
+	// Ask for user input
+	fmt.Println("Select album: ")
+	reader := bufio.NewReader(os.Stdin)
+	chosenAlbum, err := reader.ReadString('\n')
+	if err != nil {
+		return Album{}, err
+	}
+	chosenAlbum = strings.TrimSuffix(chosenAlbum, "\n")
 
+	// Convert to integer
+	chosenAlbumIndex, err := strconv.Atoi(chosenAlbum)
+	if err != nil {
+		return Album{}, err
+	}
+
+	return albums[chosenAlbumIndex-1], nil
 }
