@@ -53,7 +53,9 @@ func GetAlbums(client *flickr.FlickrClient, filter string) []photosets.Photoset 
 	var albums []photosets.Photoset
 
 	for _, photo := range photos.Items{
-		if strings.Contains(strings.ToLower(photo.Title), strings.ToLower(filter)) {
+		if photo.Id == filter {
+			albums = append(albums, photo)
+		} else if strings.Contains(strings.ToLower(photo.Title), strings.ToLower(filter)) {
 			albums = append(albums, photo)
 		}
 	}
