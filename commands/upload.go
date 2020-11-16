@@ -461,8 +461,8 @@ func getAlbums(albumId string) ([]Album, error) {
 }
 
 // Display the available albums and allow the user to select one
-func chooseAlbumFromList(albums []Album, albumId string) (Album, error) {
-	fmt.Printf("Available albums that match \"%s\":\n", albumId)
+func chooseAlbumFromList(albums []Album, searchTerm string) (Album, error) {
+	fmt.Printf("Available albums that match \"%s\":\n", searchTerm)
 	for i, album := range albums {
 		fmt.Printf("%3d: %s (%s)\n", i+1, album.Name, album.Id)
 	}
