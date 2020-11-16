@@ -32,7 +32,7 @@ func GetFlickrClient() (*flickr.FlickrClient, error) {
 }
 
 // Get the list of Flickr photosets as a slice
-func GetAlbums(client *flickr.FlickrClient, filter string) []photosets.Photoset {
+func GetPhotosets(client *flickr.FlickrClient, filter string) []photosets.Photoset {
 	config := GetConfig()
 	userId := config.Flickr.UserId
 

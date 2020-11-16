@@ -50,14 +50,14 @@ func listAlbums(filter string) {
 		return
 	}
 
-	albums := GetAlbums(flickr, filter)
+	photosets := GetPhotosets(flickr, filter)
 
-	if len(albums) == 0 {
+	if len(photosets) == 0 {
 		fmt.Println("No albums found")
 		return
 	}
 
-	for i, album := range albums {
+	for i, album := range photosets {
 		fmt.Printf("%3d: %s (%s)\n", i+1, album.Title, album.Id)
 	}
 }

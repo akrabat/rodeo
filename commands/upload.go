@@ -442,7 +442,7 @@ func getAlbums(albumId string) ([]Album, error) {
 		return []Album{}, err
 	}
 
-	photosets := GetAlbums(client, albumId)
+	photosets := GetPhotosets(client, albumId)
 	if len(photosets) == 0 {
 		// No photosets founds
 		return []Album{}, errors.New(fmt.Sprintf("could not find album %s", albumId))
