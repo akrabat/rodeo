@@ -13,6 +13,7 @@ image to Flickr.
 package commands
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -72,11 +74,21 @@ var uploadCmd = &cobra.Command{
 
 		// Read the value of --album (if it is missing, the value is empty)
 		albumId, _ := cmd.Flags().GetString("album")
-		album, err := getAlbum(albumId)
+		albums, err := getAlbums(albumId)
 		if err != nil {
-			fmt.Printf("Could not find album %s\n", albumId)
-			fmt.Println(err)
+			fmt.Printf("Error: %s\n", err)
 			return
+		}
+
+		var album Album
+		if len(albums) == 1 {
+			album = albums[0]
+		} else {
+			album, err = chooseAlbumFromList(albums, albumId)
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				return
+			}
 		}
 
 		var photoIds []string
@@ -261,7 +273,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 	// Upload file to Flickr
 	fmt.Println("Uploading photo to Flickr")
 
-	client, err := getFlickrClient()
+	client, err := GetFlickrClient()
 	if err != nil {
 		fmt.Println(err)
 		return ""
@@ -332,25 +344,6 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
-}
-
-func getFlickrClient() (*flickr.FlickrClient, error) {
-	config := GetConfig()
-
-	apiKey := config.Flickr.ApiKey
-	apiSecret := config.Flickr.ApiSecret
-	oauthToken := config.Flickr.OauthToken
-	oauthTokenSecret := config.Flickr.OauthSecret
-	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" {
-		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
-		return nil, errors.New("credentials not set")
-	}
-
-	client := flickr.NewFlickrClient(apiKey, apiSecret)
-	client.OAuthToken = oauthToken
-	client.OAuthTokenSecret = oauthTokenSecret
-
-	return client, nil
 }
 
 func getUploadedListFilename(imageFilename string, storeUploadListInImageDirectory bool) string {
@@ -437,31 +430,57 @@ func writeUploadedListFile(filenames map[string]string, uploadedListFilename str
 }
 
 // Retrieve album from Flickr's API so that we have the full information about it
-func getAlbum(albumId string) (Album, error) {
+func getAlbums(albumId string) ([]Album, error) {
 	if albumId == "" {
 		// No album to look for! So we return an empty album
-		return Album{}, nil
+		return []Album{}, nil
 	}
 
-	client, err := getFlickrClient()
+	client, err := GetFlickrClient()
 	if err != nil {
 		fmt.Println(err)
-		return Album{}, err
+		return []Album{}, err
 	}
 
-	config := GetConfig()
-	userId := config.Flickr.UserId
+	photosets := GetPhotosets(client, albumId)
+	if len(photosets) == 0 {
+		// No photosets founds
+		return []Album{}, errors.New(fmt.Sprintf("could not find album %s", albumId))
+	}
 
-	response, err := photosets.GetInfo(client, true, albumId, userId)
+	// At least one photoset found
+	var albums []Album
+	for _, photo := range photosets {
+		album := Album{
+			Id: photo.Id,
+			Name: photo.Title,
+		}
+		albums = append(albums, album)
+	}
+	return albums, nil
+}
+
+// Display the available albums and allow the user to select one
+func chooseAlbumFromList(albums []Album, searchTerm string) (Album, error) {
+	fmt.Printf("Available albums that match \"%s\":\n", searchTerm)
+	for i, album := range albums {
+		fmt.Printf("%3d: %s (%s)\n", i+1, album.Name, album.Id)
+	}
+
+	// Ask for user input
+	fmt.Println("Select album: ")
+	reader := bufio.NewReader(os.Stdin)
+	chosenAlbum, err := reader.ReadString('\n')
+	if err != nil {
+		return Album{}, err
+	}
+	chosenAlbum = strings.TrimSuffix(chosenAlbum, "\n")
+
+	// Convert to integer
+	chosenAlbumIndex, err := strconv.Atoi(chosenAlbum)
 	if err != nil {
 		return Album{}, err
 	}
 
-	album := Album{
-		Id:   response.Set.Id,
-		Name: response.Set.Title,
-	}
-
-	return album, nil
-
+	return albums[chosenAlbumIndex-1], nil
 }

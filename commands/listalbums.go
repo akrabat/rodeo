@@ -15,9 +15,6 @@ import (
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
-	"gopkg.in/masci/flickr.v2"
-	"gopkg.in/masci/flickr.v2/photosets"
-	"strings"
 )
 
 func init() {
@@ -47,39 +44,20 @@ func listAlbums(filter string) {
 	}
 	fmt.Print("\n")
 
-	config := GetConfig()
-	apiKey := config.Flickr.ApiKey
-	apiSecret := config.Flickr.ApiSecret
-	oauthToken := config.Flickr.OauthToken
-	oauthTokenSecret := config.Flickr.OauthSecret
-	userId := config.Flickr.UserId
-
-	if apiKey == "" || apiSecret == "" || oauthToken == "" || oauthTokenSecret == "" || userId == "" {
-		fmt.Println("Unable to continue. Please run the 'rodeo authenticate' command first")
-	}
-
-	client := flickr.NewFlickrClient(apiKey, apiSecret)
-	client.OAuthToken = oauthToken
-	client.OAuthTokenSecret = oauthTokenSecret
-
-	response, err := photosets.GetList(client, true, userId, 1)
+	flickr, err := GetFlickrClient()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Printf("Error: %v", err)
 		return
 	}
 
-	albums := response.Photosets;
-	if albums.Pages > 1 {
-		fmt.Println("More albums are available, but getting the second page is not implemented yet")
+	photosets := GetPhotosets(flickr, filter)
+
+	if len(photosets) == 0 {
+		fmt.Println("No albums found")
+		return
 	}
 
-	index := 0
-	for _, album := range albums.Items {
-		if strings.Contains(strings.ToLower(album.Title), strings.ToLower(filter)) {
-			index += 1
-			fmt.Printf("%3d: %s (%s)\n", index, album.Title, album.Id)
-		}
+	for i, album := range photosets {
+		fmt.Printf("%3d: %s (%s)\n", i+1, album.Title, album.Id)
 	}
-
-	fmt.Println("")
 }
