@@ -431,9 +431,11 @@ func writeUploadedListFile(filenames map[string]string, uploadedListFilename str
 
 // Retrieve album from Flickr's API so that we have the full information about it
 func getAlbums(albumId string) ([]Album, error) {
+	var albums []Album
 	if albumId == "" {
 		// No album to look for! So we return an empty album
-		return []Album{}, nil
+		albums = append(albums, Album{})
+		return albums, nil
 	}
 
 	client, err := GetFlickrClient()
@@ -449,7 +451,6 @@ func getAlbums(albumId string) ([]Album, error) {
 	}
 
 	// At least one photoset found
-	var albums []Album
 	for _, photo := range photosets {
 		album := Album{
 			Id: photo.Id,
