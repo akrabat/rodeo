@@ -68,7 +68,7 @@ func GetImageInfo(filename string, exiftool string) (*ImageInfo, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
-		fmt.Println("Error: ", err)
+		fmt.Printf("%s\n", err.(*exec.ExitError).Stderr)
 		return nil, err
 	}
 
