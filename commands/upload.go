@@ -15,7 +15,6 @@ package commands
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	. "github.com/akrabat/rodeo/internal"
 	"github.com/spf13/cobra"
@@ -93,7 +92,7 @@ var uploadCmd = &cobra.Command{
 
 		var photoIds []string
 		for _, filename := range args {
-			photoId := uploadFile(filename, forceUpload, dryRun, album)
+			photoId := uploadFile(filename, forceUpload, dryRun, &album)
 			if photoId != "" {
 				photoIds = append(photoIds, photoId)
 			}
@@ -108,7 +107,7 @@ var uploadCmd = &cobra.Command{
 	},
 }
 
-func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) string {
+func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) string {
 	fmt.Println("Processing " + filename)
 
 	config := GetConfig()
@@ -144,8 +143,8 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 	var privacy Permissions
 	privacy.SetDefaults()
 
-	if album.Id != "" {
-		albumsToAddTo = append(albumsToAddTo, album)
+	if album.Name != "" {
+		albumsToAddTo = append(albumsToAddTo, *album)
 	}
 
 	if config.Rules != nil {
@@ -324,19 +323,35 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album Album) str
 		datePosted := fmt.Sprintf("%d", info.Date.Unix())
 		respSetDate, err := photos.SetDates(client, photoId, datePosted, "")
 		if err != nil {
+			// noinspection GoNilness
 			fmt.Printf("Failed update photo %v's date posted: %v\n%v\n", photoId, err, respSetDate.ErrorMsg())
 		}
 	}
 
 	if len(albumsToAddTo) > 0 {
 		// assign photo to each photoset in the list
-		for _, album := range albumsToAddTo {
-			respAdd, err := photosets.AddPhoto(client, album.Id, photoId)
-			if err != nil {
-				//noinspection GoNilness
-				fmt.Println("Failed adding photo to the set: "+album.String(), err, respAdd.ErrorMsg())
+		for _, thisAlbum := range albumsToAddTo {
+			if thisAlbum.Id == "" {
+				// create new photoset on Flickr
+				respAdd, err := photosets.Create(client, thisAlbum.Name, "", photoId)
+				if err != nil {
+					// noinspection GoNilness
+					fmt.Println("Failed to create photoset: "+thisAlbum.Name, err, respAdd.ErrorMsg())
+				} else {
+					if album.Name == thisAlbum.Name {
+						album.Id = respAdd.Set.Id
+					}
+					fmt.Println("Added photo", photoId, "to new set", thisAlbum.String())
+				}
 			} else {
-				fmt.Println("Added photo", photoId, "to set", album.String())
+				// add to this photoset on Flickr
+				respAdd, err := photosets.AddPhoto(client, thisAlbum.Id, photoId)
+				if err != nil {
+					// noinspection GoNilness
+					fmt.Println("Failed adding photo to the set: "+thisAlbum.String(), err, respAdd.ErrorMsg())
+				} else {
+					fmt.Println("Added photo", photoId, "to set", thisAlbum.String())
+				}
 			}
 		}
 	}
@@ -446,8 +461,15 @@ func getAlbums(albumId string) ([]Album, error) {
 
 	photosets := GetPhotosets(client, albumId)
 	if len(photosets) == 0 {
-		// No photosets founds
-		return []Album{}, errors.New(fmt.Sprintf("could not find album %s", albumId))
+		// No photosets found. Prompt to see if we want to create one
+		fmt.Printf("No albums found for %s\n", albumId)
+		album, error := promptForNewAlbum(albumId)
+		if error != nil {
+			return []Album{}, error
+		}
+
+		albums = append(albums, *album)
+		return albums, nil
 	}
 
 	// At least one photoset found
@@ -459,6 +481,25 @@ func getAlbums(albumId string) ([]Album, error) {
 		albums = append(albums, album)
 	}
 	return albums, nil
+}
+
+// Ask the user for an album to create
+func promptForNewAlbum(albumId string) (*Album, error) {
+	// Ask user for name of new album
+	fmt.Printf("Enter name for new album (press enter for '%s'): \n", albumId)
+	reader := bufio.NewReader(os.Stdin)
+	chosenAlbumName, err := reader.ReadString('\n')
+	if err != nil {
+		return  nil, err
+	}
+	chosenAlbumName = strings.TrimSuffix(chosenAlbumName, "\n")
+
+	if chosenAlbumName == "" {
+		chosenAlbumName = albumId
+	}
+
+	chosenAlbum := Album{Name: chosenAlbumName}
+	return &chosenAlbum, nil
 }
 
 // Display the available albums and allow the user to select one
