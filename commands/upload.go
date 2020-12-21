@@ -341,7 +341,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 					if album.Name == thisAlbum.Name {
 						album.Id = respAdd.Set.Id
 					}
-					fmt.Println("Added photo", photoId, "to new set", thisAlbum.String())
+					fmt.Println("Added photo", photoId, "to new set", album.String())
 				}
 			} else {
 				// add to this photoset on Flickr
