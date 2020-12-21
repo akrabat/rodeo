@@ -39,6 +39,7 @@ func init() {
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
 	uploadCmd.Flags().String("album", "", "Add to specific album, e.g. --album 12345678")
+	uploadCmd.Flags().String("create-album", "", "Create a new album and add photo to it, e.g. --create-album 'SVR'")
 }
 
 // uploadCmd represents the upload command
@@ -71,22 +72,42 @@ var uploadCmd = &cobra.Command{
 			dryRun = false
 		}
 
-		// Read the value of --album (if it is missing, the value is empty)
-		albumId, _ := cmd.Flags().GetString("album")
-		albums, err = getAlbumsOrPromptForNewName(albumId)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			return
-		}
-
+		var albums []Album
 		var album Album
-		if len(albums) == 1 {
-			album = albums[0]
-		} else {
-			album, err = chooseAlbumFromList(albums, albumId)
+
+		// Read the value of --album (if it is missing, the value is empty)
+		albumName, _ := cmd.Flags().GetString("create-album")
+		if albumName != "" {
+			albums, err = getAlbums(albumName)
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 				return
+			}
+
+			if len(albums) == 0 {
+				album = Album{Name: albumName}
+			} else {
+				album = albums[0]
+			}
+		}
+
+		// Read the value of --album (if it is missing, the value is empty)
+		albumId, _ := cmd.Flags().GetString("album")
+		if albums == nil && albumId != "" {
+			albums, err = getAlbumsOrPromptForNewName(albumId)
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				return
+			}
+
+			if len(albums) == 1 {
+				album = albums[0]
+			} else {
+				album, err = chooseAlbumFromList(albums, albumId)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+					return
+				}
 			}
 		}
 
