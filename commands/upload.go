@@ -73,7 +73,7 @@ var uploadCmd = &cobra.Command{
 
 		// Read the value of --album (if it is missing, the value is empty)
 		albumId, _ := cmd.Flags().GetString("album")
-		albums, err := getAlbums(albumId)
+		albums, err = getAlbumsOrPromptForNewName(albumId)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err)
 			return
@@ -461,15 +461,8 @@ func getAlbums(albumId string) ([]Album, error) {
 
 	photosets := GetPhotosets(client, albumId)
 	if len(photosets) == 0 {
-		// No photosets found. Prompt to see if we want to create one
-		fmt.Printf("No albums found for %s\n", albumId)
-		album, error := promptForNewAlbum(albumId)
-		if error != nil {
-			return []Album{}, error
-		}
-
-		albums = append(albums, *album)
-		return albums, nil
+		// no photsets found, so return an empty album
+		return []Album{}, nil
 	}
 
 	// At least one photoset found
@@ -480,6 +473,27 @@ func getAlbums(albumId string) ([]Album, error) {
 		}
 		albums = append(albums, album)
 	}
+	return albums, nil
+}
+
+// Retrieve album from Flickr's API so that we have the full information about it
+func getAlbumsOrPromptForNewName(albumId string) ([]Album, error) {
+	albums, err := getAlbums(albumId)
+	if err != nil {
+		return albums, err
+	}
+
+	if len(albums) == 0 {
+		// No photosets found. Prompt to see if we want to create one
+		fmt.Printf("No albums found for %s\n", albumId)
+		album, err := promptForNewAlbum(albumId)
+		if err != nil {
+			return []Album{}, err
+		}
+
+		albums = append(albums, *album)
+	}
+
 	return albums, nil
 }
 
