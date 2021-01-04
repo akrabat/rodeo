@@ -39,6 +39,7 @@ func init() {
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
 	uploadCmd.Flags().String("album", "", "Add to specific album, e.g. --album 12345678")
+	uploadCmd.Flags().String("create-album", "", "Create a new album and add photo to it, e.g. --create-album 'SVR'")
 }
 
 // uploadCmd represents the upload command
@@ -71,22 +72,42 @@ var uploadCmd = &cobra.Command{
 			dryRun = false
 		}
 
-		// Read the value of --album (if it is missing, the value is empty)
-		albumId, _ := cmd.Flags().GetString("album")
-		albums, err := getAlbums(albumId)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			return
-		}
-
+		var albums []Album
 		var album Album
-		if len(albums) == 1 {
-			album = albums[0]
-		} else {
-			album, err = chooseAlbumFromList(albums, albumId)
+
+		// Read the value of --album (if it is missing, the value is empty)
+		albumName, _ := cmd.Flags().GetString("create-album")
+		if albumName != "" {
+			albums, err = getAlbums(albumName)
 			if err != nil {
 				fmt.Printf("Error: %s\n", err)
 				return
+			}
+
+			if len(albums) == 0 {
+				album = Album{Name: albumName}
+			} else {
+				album = albums[0]
+			}
+		}
+
+		// Read the value of --album (if it is missing, the value is empty)
+		albumId, _ := cmd.Flags().GetString("album")
+		if albums == nil && albumId != "" {
+			albums, err = getAlbumsOrPromptForNewName(albumId)
+			if err != nil {
+				fmt.Printf("Error: %s\n", err)
+				return
+			}
+
+			if len(albums) == 1 {
+				album = albums[0]
+			} else {
+				album, err = chooseAlbumFromList(albums, albumId)
+				if err != nil {
+					fmt.Printf("Error: %s\n", err)
+					return
+				}
 			}
 		}
 
@@ -341,7 +362,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 					if album.Name == thisAlbum.Name {
 						album.Id = respAdd.Set.Id
 					}
-					fmt.Println("Added photo", photoId, "to new set", thisAlbum.String())
+					fmt.Println("Added photo", photoId, "to new set", album.String())
 				}
 			} else {
 				// add to this photoset on Flickr
@@ -461,15 +482,8 @@ func getAlbums(albumId string) ([]Album, error) {
 
 	photosets := GetPhotosets(client, albumId)
 	if len(photosets) == 0 {
-		// No photosets found. Prompt to see if we want to create one
-		fmt.Printf("No albums found for %s\n", albumId)
-		album, error := promptForNewAlbum(albumId)
-		if error != nil {
-			return []Album{}, error
-		}
-
-		albums = append(albums, *album)
-		return albums, nil
+		// no photsets found, so return an empty album
+		return []Album{}, nil
 	}
 
 	// At least one photoset found
@@ -480,6 +494,27 @@ func getAlbums(albumId string) ([]Album, error) {
 		}
 		albums = append(albums, album)
 	}
+	return albums, nil
+}
+
+// Retrieve album from Flickr's API so that we have the full information about it
+func getAlbumsOrPromptForNewName(albumId string) ([]Album, error) {
+	albums, err := getAlbums(albumId)
+	if err != nil {
+		return albums, err
+	}
+
+	if len(albums) == 0 {
+		// No photosets found. Prompt to see if we want to create one
+		fmt.Printf("No albums found for %s\n", albumId)
+		album, err := promptForNewAlbum(albumId)
+		if err != nil {
+			return []Album{}, err
+		}
+
+		albums = append(albums, *album)
+	}
+
 	return albums, nil
 }
 
