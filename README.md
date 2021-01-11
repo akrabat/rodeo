@@ -28,6 +28,17 @@ Rodeo keeps track of which files it has uploaded in
 in the directory of the image file. This is controlled by the config setting
 `upload.store_uploaded_list_in_image_dir`.
 
+#### parameters
+
+The following parameters are available for the `upload` command:
+
+| Parameter               | What it does                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `--album <name>`        | Specify the Flickr album name (or id) that the images in this upload should be added to. |
+| `--create-album <name>` | Create a new Flickr album and add these images to it.                                    |
+| `-n`, `--dry-run`       | Show what will happen without actually uploading to Flickr.                              |
+| `-f`, `--force`         | Override the check that prevents uploading an image more than once.                      |
+
 ### rodeo resize
 
 Resize image within a bounding box at a given quality which can be useful for social media or messaging.
