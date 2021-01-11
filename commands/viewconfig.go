@@ -50,6 +50,11 @@ func viewConfig() {
 		fmt.Printf("  User: %v (username: %v, id:%v)\n", flickr.Fullname, flickr.Username, flickr.UserId)
 	}
 
+	commands := config.Cmd
+	fmt.Println("\nCommands")
+	fmt.Printf("  Exiftool: %v\n", commands.Exiftool)
+	fmt.Printf("  Convert: %v\n", commands.Convert)
+
 	resize := config.Resize
 	fmt.Println("\nResize settings")
 	fmt.Printf("  Method: %v\n", resize.Method)
