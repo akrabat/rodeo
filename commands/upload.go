@@ -111,11 +111,40 @@ var uploadCmd = &cobra.Command{
 			}
 		}
 
+		config := GetConfig()
+		convertCmd := config.Cmd.Convert
+		if convertCmd == "" {
+			fmt.Println("Error: cmd.convert needs to be configured.")
+			fmt.Println("Config file:", viper.ConfigFileUsed(), "\n")
+			os.Exit(2)
+		}
+
 		var photoIds []string
 		for _, filename := range args {
+			// If the extension is tiff, then convert to jpeg
+			var jpegFilename string
+			var err error
+			if filepath.Ext(filename) == ".tiff" {
+				fmt.Printf("Converting %s to JPEG\n", filepath.Base(filename))
+				jpegFilename, err = convertFileToJpeg(filename, convertCmd)
+				if err != nil {
+					fmt.Printf("Error: Failed to convert %s to JPEG\n", filename)
+					continue
+				}
+				filename = jpegFilename
+			}
+
+			// Upload the file to Flickr
 			photoId := uploadFile(filename, forceUpload, dryRun, &album)
 			if photoId != "" {
 				photoIds = append(photoIds, photoId)
+			}
+
+			if jpegFilename != "" {
+				err = os.Remove(jpegFilename)
+				if err != nil {
+					fmt.Printf("Error: Failed to delete %s.\n", jpegFilename)
+				}
 			}
 		}
 
@@ -380,6 +409,20 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 	fmt.Printf("View this photo: http://www.flickr.com/photos/%s/%s\n", config.Flickr.Username, photoId)
 	fmt.Println("")
 	return photoId
+}
+
+// Convert file to JPEG using convert
+func convertFileToJpeg(filename string, convertCmd string) (string, error) {
+	jpegFilename := strings.TrimSuffix(filename, filepath.Ext(filename)) + ".jpeg"
+
+	cmd := exec.Command(convertCmd, filename, jpegFilename)
+	_, err := cmd.Output()
+	if err != nil {
+		fmt.Printf("%s\n", err.(*exec.ExitError).Stderr)
+		return "", err
+	}
+
+	return jpegFilename, nil
 }
 
 func getUploadedListFilename(imageFilename string, storeUploadListInImageDirectory bool) string {

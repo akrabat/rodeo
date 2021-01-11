@@ -7,12 +7,13 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type ImageInfo struct {
-	Width        uint                   `json:"ExifImageWidth"`
-	Height       uint                   `json:"ExifImageHeight"`
+	Width        uint                   `json:"ImageWidth"`
+	Height       uint                   `json:"ImageHeight"`
 	Title        string                 `json:"ObjectName"`
 	Description  string                 `json:"Caption-Abstract"`
 	Keywords     stringArray            `json:"Keywords"`
@@ -63,8 +64,7 @@ func (sa *stringArray) UnmarshalJSON(data []byte) error {
 
 // Read metadata (Exif/IPTC) from image using exiftool
 func GetImageInfo(filename string, exiftool string) (*ImageInfo, error) {
-
-	cmd := exec.Command(exiftool, "-j", "-exif:*", "-iptc:*", filename)
+	cmd := exec.Command(exiftool, "-j", filename)
 
 	out, err := cmd.Output()
 	if err != nil {
@@ -104,6 +104,11 @@ func setImageInfoDate(info *ImageInfo) {
 		offsetTime := maybeOffsetTime.(string)
 		tz = getTimeZoneFromOffset(offsetTime, tz)
 	}
+
+	// remove a trailing Z if there is one
+	dateTimeOriginal = strings.Replace(dateTimeOriginal, "Z", "", 1)
+	// remove a T if there is one
+	dateTimeOriginal = strings.Replace(dateTimeOriginal, "T", " ", 1)
 
 	date, err := time.ParseInLocation("2006:01:02 15:04:05", dateTimeOriginal, tz)
 	if err == nil {
