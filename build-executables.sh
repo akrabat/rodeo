@@ -41,7 +41,9 @@ do
     fi
 
     echo "Building release/$output_name..."
-    env GOOS=$GOOS GOARCH=$GOARCH go build -o release/$output_name
+    env GOOS=$GOOS GOARCH=$GOARCH go build \
+      -ldflags "-X github.com/akrabat/rodeo/commands.Version=$version" \
+      -o release/$output_name
     if [ $? -ne 0 ]; then
         echo 'An error has occurred! Aborting the script execution...'
         exit 1
