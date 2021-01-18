@@ -19,11 +19,12 @@ import (
 	"os"
 )
 
+var Version = "dev-build"
 var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Version: "0.4-dev",
+	Version: Version,
 	Use:     "rodeo",
 	Short:   "Flickr command line tool",
 	Long: `A command line tool to work with Flickr and images.
