@@ -105,6 +105,13 @@ func setImageInfoDate(info *ImageInfo) {
 		tz = getTimeZoneFromOffset(offsetTime, tz)
 	}
 
+	// remove hour offset if there is one
+	if idx := strings.Index(dateTimeOriginal, "+"); idx != -1 {
+		offset := dateTimeOriginal[idx:]
+		tz = getTimeZoneFromOffset(offset, tz)
+		dateTimeOriginal = dateTimeOriginal[:idx]
+	}
+
 	// remove a trailing Z if there is one
 	dateTimeOriginal = strings.Replace(dateTimeOriginal, "Z", "", 1)
 	// remove a T if there is one
@@ -126,7 +133,7 @@ func getTimeZoneFromOffset(offset string, tz *time.Location) *time.Location {
 			offsetHours, _ := strconv.Atoi(parts[0])
 			offsetMins, _ := strconv.Atoi(parts[1])
 
-			if offsetHours != 0 && offsetMins != 0 {
+			if offsetHours != 0 || offsetMins != 0 {
 				// Set the timezone as a numeric index
 				// Note: as we don't know the Timezone identifier, leave it blank
 				tz = time.FixedZone("", 60*((60*offsetHours)+(30*offsetMins)))
