@@ -14,6 +14,7 @@ package_name=rodeo
 # The full list of the platforms is at: https://golang.org/doc/install/source#environment
 platforms=(
 "darwin/amd64"
+"darwin/arm64"
 "linux/amd64"
 "linux/arm"
 "linux/arm64"
