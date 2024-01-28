@@ -33,62 +33,10 @@ jobs:
       - name: List the Rodeo executables
         run: ls -l ./release
 
-      - name: Upload the Rodeo binary for macOS (AMD64)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload the Rodeo binaries
+        uses: actions/svenstaro/upload-release-action@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/rodeo-${{ github.event.release.tag_name }}-macOS-amd64.gz
-          asset_name: rodeo-${{ github.event.release.tag_name }}-macOS-amd64.gz
-          asset_content_type: application/gzip
-
-      - name: Upload the Rodeo binary for macOS (ARM64)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/rodeo-${{ github.event.release.tag_name }}-macOS-arm64.gz
-          asset_name: rodeo-${{ github.event.release.tag_name }}-macOS-arm64.gz
-          asset_content_type: application/gzip
-
-      - name: Upload the Rodeo binary for Linux (AMD64)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/rodeo-${{ github.event.release.tag_name }}-linux-amd64.gz
-          asset_name: rodeo-${{ github.event.release.tag_name }}-linux-amd64.gz
-          asset_content_type: application/gzip
-
-      - name: Upload the Rodeo binary for Linux (ARM)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/rodeo-${{ github.event.release.tag_name }}-linux-arm.gz
-          asset_name: rodeo-${{ github.event.release.tag_name }}-linux-arm.gz
-          asset_content_type: application/gzip
-
-      - name: Upload the Rodeo binary for Linux (ARM64)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/rodeo-${{ github.event.release.tag_name }}-linux-arm64.gz
-          asset_name: rodeo-${{ github.event.release.tag_name }}-linux-arm64.gz
-          asset_content_type: application/gzip
-
-      - name: Upload the Rodeo binary for Windows (AMD64)
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./release/rodeo-${{ github.event.release.tag_name }}-windows-amd64.zip
-          asset_name: rodeo-${{ github.event.release.tag_name }}-windows-amd64.zip
-          asset_content_type: application/zip
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          file: ./release/rodeo-*
+          file_glob: true
