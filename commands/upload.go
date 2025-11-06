@@ -34,6 +34,7 @@ import (
 const uploadedListBaseFilename = "rodeo-uploaded-files.json"
 
 var verbose bool
+var veryVerbose bool
 
 func init() {
 	rootCmd.AddCommand(uploadCmd)
@@ -42,6 +43,7 @@ func init() {
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
 	uploadCmd.Flags().BoolP("verbose", "v", false, "Display additional messages during processing")
+	uploadCmd.Flags().Bool("very-verbose", false, "Display detailed image metadata during processing")
 	uploadCmd.Flags().String("album", "", "Add to specific album, e.g. --album 12345678")
 	uploadCmd.Flags().String("create-album", "", "Create a new album and add photo to it, e.g. --create-album 'SVR'")
 }
@@ -80,6 +82,16 @@ var uploadCmd = &cobra.Command{
 		verbose, err = cmd.Flags().GetBool("verbose")
 		if err != nil {
 			verbose = false
+		}
+
+		// Read the value of --very-verbose (if it is missing, the value is false)
+		// If very-verbose is set, it implies verbose is also set
+		veryVerbose, err = cmd.Flags().GetBool("very-verbose")
+		if err != nil {
+			veryVerbose = false
+		}
+		if veryVerbose {
+			verbose = true
 		}
 
 		var albums []Album
@@ -201,6 +213,28 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 	info, err := GetImageInfo(filename, exiftool)
 	if err != nil {
 		return ""
+	}
+
+	if veryVerbose {
+		infoJSON, err := json.MarshalIndent(info, "", "  ")
+		if err != nil {
+			fmt.Printf("Error marshaling info to JSON: %v\n", err)
+		} else {
+			fmt.Println("Image metadata:")
+			fmt.Println(string(infoJSON))
+			fmt.Println()
+		}
+
+		if info.X != nil && len(info.X) > 0 {
+			xJSON, err := json.MarshalIndent(info.X, "", "  ")
+			if err != nil {
+				fmt.Printf("Error marshaling X to JSON: %v\n", err)
+			} else {
+				fmt.Println("All metadata (X):")
+				fmt.Println(string(xJSON))
+				fmt.Println()
+			}
+		}
 	}
 
 	// process rules
