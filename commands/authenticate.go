@@ -30,7 +30,7 @@ func init() {
 var authenticateCmd = &cobra.Command{
 	Use:   "authenticate",
 	Short: "Authenticate with Flickr",
-	Long: "Authenticate with Flickr",
+	Long:  "Authenticate with Flickr",
 	Run: func(cmd *cobra.Command, args []string) {
 		authenticate()
 	},
@@ -69,7 +69,6 @@ func authenticate() {
 
 	fmt.Printf("Saved your Flickr API Key\n\n")
 
-
 	apiSecret := viper.GetString("flickr.api_secret")
 	if apiSecret != "" {
 		fmt.Println("Please provide your Flickr API Secret (Leave blank to use current secret)")
@@ -99,7 +98,6 @@ func authenticate() {
 	}
 
 	fmt.Printf("Saved your Flickr API Secret\n\n")
-
 
 	// Authenticate
 	client := flickr.NewFlickrClient(apiKey, apiSecret)

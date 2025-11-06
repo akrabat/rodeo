@@ -26,7 +26,7 @@ func init() {
 var listAlbumsCmd = &cobra.Command{
 	Use:   "listalbums",
 	Short: "List Flickr albums",
-	Long: `List Flickr albums`,
+	Long:  `List Flickr albums`,
 	Run: func(cmd *cobra.Command, args []string) {
 		filter, err := cmd.Flags().GetString("filter")
 		if err != nil {
