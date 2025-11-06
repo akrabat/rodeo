@@ -33,12 +33,15 @@ import (
 
 const uploadedListBaseFilename = "rodeo-uploaded-files.json"
 
+var verbose bool
+
 func init() {
 	rootCmd.AddCommand(uploadCmd)
 
 	// Register command line options
 	uploadCmd.Flags().BoolP("force", "f", false, "Force upload of file even if already uploaded")
 	uploadCmd.Flags().BoolP("dry-run", "n", false, "Show what would have been uploaded")
+	uploadCmd.Flags().BoolP("verbose", "v", false, "Display additional messages during processing")
 	uploadCmd.Flags().String("album", "", "Add to specific album, e.g. --album 12345678")
 	uploadCmd.Flags().String("create-album", "", "Create a new album and add photo to it, e.g. --create-album 'SVR'")
 }
@@ -71,6 +74,12 @@ var uploadCmd = &cobra.Command{
 		dryRun, err := cmd.Flags().GetBool("dry-run")
 		if err != nil {
 			dryRun = false
+		}
+
+		// Read the value of --verbose (if it is missing, the value is false)
+		verbose, err = cmd.Flags().GetBool("verbose")
+		if err != nil {
+			verbose = false
 		}
 
 		var albums []Album
@@ -158,6 +167,13 @@ var uploadCmd = &cobra.Command{
 	},
 }
 
+func debug(format string, a ...interface{}) {
+	if verbose {
+		message := fmt.Sprintf(format, a...)
+		fmt.Println("DEBUG: " + message)
+	}
+}
+
 func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) string {
 	fmt.Println("Processing " + filename)
 
@@ -200,6 +216,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 
 	if config.Rules != nil {
 		for _, rule := range config.Rules {
+			debug("Looking at rule '%s'", rule.Name)
 			excludesAll := rule.Condition.ExcludesAll
 			excludesAny := rule.Condition.ExcludesAny
 			includesAll := rule.Condition.IncludesAll
@@ -212,7 +229,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 				intersection = Intersection(info.Keywords, excludesAll)
 				if len(intersection) == len(excludesAll) {
 					// Every `excludesAll` keyword is in info.Keywords, so this rule does not apply
-					//fmt.Println("Excluding due to `excludesAll`")
+					debug("Excluding due to `excludesAll`")
 					continue
 				}
 				//fmt.Println("`excludesAll` condition does not apply")
@@ -223,7 +240,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 				intersection = Intersection(info.Keywords, excludesAny)
 				if len(intersection) > 0 {
 					// At least one `excludesAny` keyword is in info.Keywords, so this rule does not apply
-					//fmt.Println("Excluding due to `excludesAny`")
+					debug("Excluding due to `excludesAny`")
 					continue
 				}
 				//fmt.Println("`excludesAny` condition does not apply")
@@ -235,7 +252,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 				intersection = Intersection(info.Keywords, includesAll)
 				if len(intersection) != len(includesAll) {
 					// All `includesAll` keywords do not exist, so this rule does not apply
-					//fmt.Println("Excluding due to `includesAll`")
+					debug("Excluding due to `includesAll`")
 					continue
 				}
 				//fmt.Println("`includesAll` condition is met")
@@ -245,7 +262,7 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 				intersection = Intersection(info.Keywords, includesAny)
 				if len(intersection) == 0 {
 					// There are no `includesAny` keywords in info.Keywords, so this rule does not apply
-					//fmt.Println("Excluding due to `includesAny`")
+					debug("Excluding due to `includesAny`")
 					continue
 				}
 				//fmt.Println("`includesAny` condition is met")
@@ -253,8 +270,8 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 			}
 
 			if processRules {
-				//fmt.Println("Will process rules")
-				//fmt.Printf("Applicable keywords: %s\n", strings.Join(intersection, ", "))
+				debug("Will process rules")
+				debug("Applicable keywords: %s", strings.Join(intersection, ", "))
 				if rule.Action.Delete {
 					keywordsToRemove = append(keywordsToRemove, intersection...)
 				}
@@ -268,6 +285,8 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 				}
 			}
 		}
+	} else {
+		debug("No config found")
 	}
 
 	// Set the keywords to be added to the Flickr photo record
