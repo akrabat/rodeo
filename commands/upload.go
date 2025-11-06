@@ -16,18 +16,19 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	. "github.com/akrabat/rodeo/internal"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"gopkg.in/masci/flickr.v2"
-	"gopkg.in/masci/flickr.v2/photos"
-	"gopkg.in/masci/flickr.v2/photosets"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	. "github.com/akrabat/rodeo/internal"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"gopkg.in/masci/flickr.v2"
+	"gopkg.in/masci/flickr.v2/photos"
+	"gopkg.in/masci/flickr.v2/photosets"
 )
 
 const uploadedListBaseFilename = "rodeo-uploaded-files.json"
@@ -293,8 +294,11 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 			}
 			fmt.Printf("  - albums to add to: \"%s\"\n", strings.Join(strs, "\", \""))
 		}
-		fmt.Printf("\n")
 	}
+
+	title := strings.Trim(info.Title, " ")
+	fmt.Printf("  - title will be set to \"%s\"\n", title)
+	fmt.Printf("\n")
 
 	// All ready to process now
 	if dryRun {
@@ -328,7 +332,6 @@ func uploadFile(filename string, forceUpload bool, dryRun bool, album *Album) st
 		return ""
 	}
 
-	title := strings.Trim(info.Title, " ")
 	if title == "" {
 		// no title - use filename (without extension)
 		title = filepath.Base(filename)
@@ -532,7 +535,7 @@ func getAlbums(albumId string) ([]Album, error) {
 	// At least one photoset found
 	for _, photo := range photosets {
 		album := Album{
-			Id: photo.Id,
+			Id:   photo.Id,
 			Name: photo.Title,
 		}
 		albums = append(albums, album)
@@ -568,7 +571,7 @@ func promptForNewAlbum(albumId string) (*Album, error) {
 	reader := bufio.NewReader(os.Stdin)
 	chosenAlbumName, err := reader.ReadString('\n')
 	if err != nil {
-		return  nil, err
+		return nil, err
 	}
 	chosenAlbumName = strings.TrimSuffix(chosenAlbumName, "\n")
 
