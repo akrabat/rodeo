@@ -67,6 +67,7 @@ type Action struct {
 	Albums  []Album
 }
 type Rules struct {
+	Name      string
 	Condition Condition
 	Action    Action
 }

@@ -144,7 +144,8 @@ resize:
 
 # rules for `rodeo upload`
 rules:
-  - condition: 
+  - name: {name of rule}
+    condition: 
       excludes_any:
         - {keywordA}
         - {keywordB}
@@ -158,7 +159,8 @@ rules:
           name: "{album1 name}"
         - id: "{album2 id}"
           name: "{album2 name}"
-  - condition: 
+  - name: {name of rules}
+    condition: 
       excludes_all:
         - {keywordC}
         - {keywordD}
@@ -199,7 +201,7 @@ run of `rodeo`
 
 ### Upload rules
 
-For each rules there are up to four conditions and two actions:
+Each rule has a name, with up to four conditions and two actions:
 
 *Conditions:*
 
