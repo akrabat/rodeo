@@ -15,4 +15,3 @@ func PluralS(s interface{}) string {
 	}
 	return "s"
 }
-

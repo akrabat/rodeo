@@ -12,11 +12,11 @@ import (
 )
 
 type ImageInfo struct {
-	Width        uint                   `json:"ImageWidth"`
-	Height       uint                   `json:"ImageHeight"`
-	Title        string                 `json:"ObjectName"`
-	Description  string                 `json:"Caption-Abstract"`
-	Keywords     stringArray            `json:"Keywords"`
+	Width        uint        `json:"ImageWidth"`
+	Height       uint        `json:"ImageHeight"`
+	Title        string      `json:"Title"`
+	Description  string      `json:"Description"`
+	Keywords     stringArray `json:"Keywords"`
 	Date         *time.Time
 	Make         string                 `json:"Make"`
 	Model        string                 `json:"Model"`
@@ -24,6 +24,40 @@ type ImageInfo struct {
 	Aperture     json.Number            `json:"ApertureValue"`
 	ISO          json.Number            `json:"ISO"`
 	X            map[string]interface{} `json:"-"`
+}
+
+func (info *ImageInfo) UnmarshalJSON(data []byte) error {
+	// Create an alias type to avoid infinite recursion
+	type Alias ImageInfo
+	aux := &struct {
+		Subject         stringArray `json:"Subject"`
+		ObjectName      string      `json:"ObjectName"`
+		CaptionAbstract string      `json:"Caption-Abstract"`
+		*Alias
+	}{
+		Alias: (*Alias)(info),
+	}
+
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	// If Keywords is empty but Subject has values, use Subject for Keywords
+	if len(info.Keywords) == 0 && len(aux.Subject) > 0 {
+		info.Keywords = aux.Subject
+	}
+
+	// If Title is empty but ObjectName has a value, use ObjectName
+	if info.Title == "" && aux.ObjectName != "" {
+		info.Title = aux.ObjectName
+	}
+
+	// If Description is empty but Caption-Abstract has a value, use Caption-Abstract
+	if info.Description == "" && aux.CaptionAbstract != "" {
+		info.Description = aux.CaptionAbstract
+	}
+
+	return nil
 }
 
 // A stringArray is an array of strings that has been unmarshalled from a JSON
@@ -93,7 +127,7 @@ func GetImageInfo(filename string, exiftool string) (*ImageInfo, error) {
 
 func setImageInfoDate(info *ImageInfo) {
 	// Set DateTimeOriginal with offset from OffsetTimeOriginal if it's set and is an offset
-	dateTimeOriginal :=  info.X["DateTimeOriginal"].(string)
+	dateTimeOriginal := info.X["DateTimeOriginal"].(string)
 
 	// Determine timezone
 	tz := time.FixedZone("UTC", 0)

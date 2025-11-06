@@ -16,4 +16,3 @@ func ConfigDir() string {
 
 	return home + "/.config/rodeo"
 }
-

@@ -8,18 +8,18 @@ import (
 var config *Config
 
 type Command struct {
-	Convert string
+	Convert  string
 	Exiftool string
 }
 
 type Flickr struct {
-	ApiKey string `mapstructure:"api_key"`
-	ApiSecret string `mapstructure:"api_secret"`
-	Fullname string `mapstructure:"full_name"`
-	OauthToken string `mapstructure:"oauth_token"`
+	ApiKey      string `mapstructure:"api_key"`
+	ApiSecret   string `mapstructure:"api_secret"`
+	Fullname    string `mapstructure:"full_name"`
+	OauthToken  string `mapstructure:"oauth_token"`
 	OauthSecret string `mapstructure:"oauth_token_secret"`
-	UserId string `mapstructure:"user_nsid"`
-	Username string `mapstructure:"username"`
+	UserId      string `mapstructure:"user_nsid"`
+	Username    string `mapstructure:"username"`
 }
 
 type Upload struct {
@@ -30,20 +30,21 @@ type Upload struct {
 type Resize struct {
 	Method  string
 	Quality string
-	Scale string
+	Scale   string
 }
 
 type Condition struct {
-	ExcludesAll []string  `mapstructure:"excludes_all"` // list of keywords that must all not exist on image
-	ExcludesAny []string  `mapstructure:"excludes_any"` // list of keywords where any one must not exist on image
-	IncludesAll []string  `mapstructure:"includes_all"` // list of keywords that must all exist on image
-	IncludesAny []string  `mapstructure:"includes_any"` // list of keywords where any one must exist on image
+	ExcludesAll []string `mapstructure:"excludes_all"` // list of keywords that must all not exist on image
+	ExcludesAny []string `mapstructure:"excludes_any"` // list of keywords where any one must not exist on image
+	IncludesAll []string `mapstructure:"includes_all"` // list of keywords that must all exist on image
+	IncludesAny []string `mapstructure:"includes_any"` // list of keywords where any one must exist on image
 }
 
 type Album struct {
 	Id   string
 	Name string
 }
+
 func (a Album) String() string {
 	return fmt.Sprintf("%s (%s)", a.Name, a.Id)
 }
@@ -53,6 +54,7 @@ type Permissions struct {
 	Friends bool
 	Public  bool
 }
+
 func (p *Permissions) SetDefaults() {
 	p.Family = true
 	p.Friends = true
@@ -60,21 +62,21 @@ func (p *Permissions) SetDefaults() {
 }
 
 type Action struct {
-	Delete bool
+	Delete  bool
 	Privacy *Permissions
-	Albums []Album
+	Albums  []Album
 }
 type Rules struct {
 	Condition Condition
-	Action     Action
+	Action    Action
 }
 
 type Config struct {
-	Cmd Command
+	Cmd    Command
 	Flickr Flickr
 	Upload Upload
 	Resize Resize
-	Rules []Rules
+	Rules  []Rules
 }
 
 func GetConfig() *Config {

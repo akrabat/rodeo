@@ -26,7 +26,6 @@ func Intersection(section1, section2 []string) (intersection []string) {
 	return
 }
 
-
 // From: https://stackoverflow.com/a/56377243/23060
 func Difference(a, b []string) []string {
 	temp := map[string]int{}

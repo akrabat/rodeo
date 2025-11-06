@@ -97,6 +97,5 @@ func viewConfig() {
 			fmt.Printf("      Add to album%v: %v\n", PluralS(albums), strings.Join(strs, ", "))
 		}
 
-
 	}
 }
